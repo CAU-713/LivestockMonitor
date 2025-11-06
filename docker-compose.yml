@@ -1,0 +1,88 @@
+services:
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: postgres_db
+    restart: always
+    # Load credentials from the .env file
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db_init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username=$$POSTGRES_USER --dbname=$$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - ./.env
+    # The ports section is commented out for better security in production.
+    # The 'backend' service can still connect to 'db' via Docker's internal network.
+    # Uncomment it only if you need to connect to the DB from your host machine for debugging.
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:alpine
+    container_name: redis_cache
+    restart: always
+    # The ports section is commented out for better security in production.
+    # Uncomment it only if you need to connect to Redis from your host machine for debugging.
+    # The 'backend' service can still connect to 'redis' via Docker's internal network
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+        
+#  backend:
+#    build: ./backend
+#    container_name: backend_app
+#    restart: always
+#    # Remove external port mapping since Caddy will handle it
+#    ports:
+#      - "8000:8000"
+#    # Load all necessary environment variables from the .env file
+#    env_file:
+#      - ./.env
+#    # Override or set specific variables needed for the container environment
+#    environment:
+#      - DB_HOST=db # The backend connects to the db service on the Docker network
+#      - DB_USER=${POSTGRES_USER}
+#      - DB_PASSWORD=${POSTGRES_PASSWORD}
+#      - DB_NAME=${POSTGRES_DB}
+#
+#    depends_on:
+#      db:
+#        condition: service_healthy # Ensure the db service is healthy before starting the backend
+#      redis:
+#        condition: service_healthy
+#
+#  frontend:
+#    build:
+#      context: ./frontend
+#      args:
+#        # Frontend will now make requests to the same domain through Caddy
+#        NEXT_PUBLIC_BACKEND_URL: ${BACKEND_URL}
+#    # Remove external port mapping since Caddy will handle it
+#    ports:
+#      - "3000:3000"
+#    env_file:
+#      - ./.env
+#    environment:
+#      - BACKEND_URL=${BACKEND_URL} # this defines the URL the frontend makes requests to
+#      - NEXT_PUBLIC_BACKEND_URL=${BACKEND_URL}
+#    depends_on:
+#      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  
