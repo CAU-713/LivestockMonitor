@@ -29,11 +29,25 @@ conda create -n LivestockMonitor python=3.12
 pip install -r requirements.txt
 ```
 
-## 2 打开配置并修改配置
+## 2 打开并修改运行配置文件
 
 ![img.png](doc/img1.png)
 
 ![img.png](doc/img2.png)
 
 
-# 前端代码的启动(施工中、、、)
+# 前端代码的启动
+## 1 安装nodejs环境
+建议版本：v20.0.0 以上
+
+## 2 进入frontend文件夹下安装依赖
+```bash
+cd frontend
+npm install
+```
+## 3 打开并修改运行配置文件
+![img.png](doc/img3.png)
+
+![img.png](doc/img4.png)
+
+分别运行install和dev
