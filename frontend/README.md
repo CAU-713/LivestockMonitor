@@ -104,6 +104,51 @@ frontend/
    - 目标用户：
    - 核心内容：用户管理、设备绑定、告警规则配置。
 
+## 📜 代码规范 (Linting & Formatting)
+
+为了保证代码质量和风格统一，项目集成了 ESLint 和 Prettier。
+
+- **ESLint**: 负责代码质量检查，发现潜在的 Bug 和不合理的写法。
+- **Prettier**: 负责代码风格统一，如单双引号、分号、缩进等。
+- **`prettier-plugin-tailwindcss`**: 自动对 Tailwind CSS 的 `className` 进行排序，保持样式定义的一致性。
+
+### 编辑器集成 (强烈推荐)
+
+为了获得最佳开发体验，请在 VS Code 中安装以下插件，并配置保存时自动格式化：
+
+1.  **安装插件**:
+    - `ESLint` (dbaeumer.vscode-eslint)
+    - `Prettier - Code formatter` (esbenp.prettier-vscode)
+
+2.  **配置 VS Code (`settings.json`)**:
+    按下 `Ctrl + Shift + P` 并搜索 "Open User Settings (JSON)"，添加以下配置：
+    ```json
+    {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+      }
+    }
+    ```
+    配置完成后，每次保存文件时，代码将被自动格式化并修复简单的 ESLint 问题。
+
+### JetBrains IDEs (WebStorm / PyCharm Pro)
+
+WebStorm 和 PyCharm Professional 对此提供了优秀的内置支持和插件。
+
+1.  **安装插件（可能已自带）**:
+    打开 `Settings/Preferences` > `Plugins` > `Marketplace`，安装以下插件：
+    - `Prettier`
+    - `Tailwind CSS`
+
+2.  **开启自动格式化与修复**:
+    - **ESLint**: 进入 `Settings/Preferences` > `Languages & Frameworks` > `JavaScript` > `Code Quality Tools` > `ESLint`，选择 `Automatic ESLint configuration` 并勾选 `Run eslint --fix on save`。
+    - **Prettier**: 进入 `Settings/Preferences` > `Languages & Frameworks` > `JavaScript` > `Prettier`，勾选 `On save`。
+
+    配置完成后，IDE 会在保存时自动使用 Prettier 格式化代码，并用 ESLint 修复问题。
+
+
 ## ⚠️ 注意事项
 
 - **响应式设计**: 开发时请同时测试 窗口全屏 和 窗口缩小 时的效果，确保布局不会崩坏。
