@@ -9,9 +9,15 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.5",
+    "@mui/material": "^7.3.5",
+    "@mui/material-nextjs": "^7.3.5",
     "next": "15.3.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "recharts": "^3.4.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -19,7 +25,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "9.39.1",
-    "eslint-config-next": "16.0.3",
+    "eslint-config-next": "15.3.4",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",

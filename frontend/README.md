@@ -10,6 +10,8 @@
 - **框架**: Next.js 15 (App Router)
 - **语言**: TypeScript
 - **样式**: Tailwind CSS v4
+- **UI 组件库**: Material-UI (MUI)
+- **图表库**: Recharts
 - **部署**: Docker
 
 ## 🚀 快速开始
