@@ -49,6 +49,7 @@ export interface Camera {
     id: string;
     name: string;
     shedId: string; // Foreign key to link to a Shed
+    penId?: string; // Optional foreign key to link to a specific Pen
     status: 'online' | 'offline';
     streamUrl: string; // URL for the raw video stream
     thumbnailUrl?: string; // Optional URL for a preview image

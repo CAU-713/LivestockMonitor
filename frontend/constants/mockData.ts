@@ -169,18 +169,31 @@ export const mockSensorRecords: SensorRecord[] = [
 // 5. Camera List (摄像头列表)
 // =================================================================
 export const mockCameras: Camera[] = [
+  // Shed-level camera, no penId
   {
     id: 'cam-a-01',
-    name: 'A区摄像头',
+    name: 'A区-全景摄像头',
     shedId: 'shed-a',
     status: 'online',
     streamUrl: 'https://example.com/stream/cam-a-01.m3u8',
     thumbnailUrl: 'https://picsum.photos/seed/cam-a-01/400/300',
   },
+  // Pen-level camera
+  {
+    id: 'cam-a-02',
+    name: 'A区-1号圈摄像头',
+    shedId: 'shed-a',
+    penId: 'pen-a1',
+    status: 'online',
+    streamUrl: 'https://example.com/stream/cam-a-02.m3u8',
+    thumbnailUrl: 'https://picsum.photos/seed/cam-a-02/400/300',
+  },
+  // Pen-level camera
   {
     id: 'cam-b-01',
-    name: 'B区摄像头',
+    name: 'B区-1号圈摄像头',
     shedId: 'shed-b',
+    penId: 'pen-b1',
     status: 'offline',
     streamUrl: 'https://example.com/stream/cam-b-01.m3u8',
     thumbnailUrl: 'https://picsum.photos/seed/cam-b-01/400/300',
