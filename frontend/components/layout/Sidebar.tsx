@@ -92,7 +92,6 @@ const Sidebar = () => {
             <AnalyticsIcon />
           </ListItemIcon>
           <ListItemText primary='历史数据' />{' '}
-          {/*（视频数据限制可选时长如10分钟），都加入导出xlsx功能 */}
           {historyOpen ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
         <Collapse in={historyOpen} timeout='auto' unmountOnExit>
