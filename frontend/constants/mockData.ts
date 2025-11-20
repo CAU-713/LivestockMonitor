@@ -175,7 +175,7 @@ export const mockCameras: Camera[] = [
     name: 'A区-全景摄像头',
     shedId: 'shed-a',
     status: 'online',
-    streamUrl: 'https://example.com/stream/cam-a-01.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnailUrl: 'https://picsum.photos/seed/cam-a-01/400/300',
   },
   // Pen-level camera
@@ -185,7 +185,7 @@ export const mockCameras: Camera[] = [
     shedId: 'shed-a',
     penId: 'pen-a1',
     status: 'online',
-    streamUrl: 'https://example.com/stream/cam-a-02.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnailUrl: 'https://picsum.photos/seed/cam-a-02/400/300',
   },
   // Pen-level camera
@@ -195,7 +195,7 @@ export const mockCameras: Camera[] = [
     shedId: 'shed-b',
     penId: 'pen-b1',
     status: 'offline',
-    streamUrl: 'https://example.com/stream/cam-b-01.m3u8',
+    streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     thumbnailUrl: 'https://picsum.photos/seed/cam-b-01/400/300',
   },
 ];
@@ -209,10 +209,11 @@ export const mockBehaviorSummaries: BehaviorSummary[] = [
     id: 'sum-a1-1',
     cameraId: 'cam-a-01',
     timestamp: getTime(30),
-    eatingCount: 15,
-    drinkingCount: 5,
-    standingCount: 30,
-    lyingCount: 30,
+    eatingCount: 15, // 进食行为
+    drinkingCount: 5, // 饮水行为
+    lickingCount: 1, // 舔舐行为
+    standingCount: 30, // 站立行为
+    lyingCount: 30, // 躺卧行为
   },
   {
     id: 'sum-a1-2',
@@ -220,6 +221,7 @@ export const mockBehaviorSummaries: BehaviorSummary[] = [
     timestamp: getTime(15),
     eatingCount: 25,
     drinkingCount: 8,
+    lickingCount: 2,
     standingCount: 22,
     lyingCount: 25,
   },
@@ -229,6 +231,7 @@ export const mockBehaviorSummaries: BehaviorSummary[] = [
     timestamp: getTime(0),
     eatingCount: 20,
     drinkingCount: 10,
+    lickingCount: 0,
     standingCount: 20,
     lyingCount: 30,
   },

@@ -14,7 +14,7 @@ export interface Shed {
  * @description Represents a pen within a shed
  */
 export interface Pen {
-  id:string;
+  id: string;
   name: string;
   shedId: string; // Foreign key to link to a Shed
 }
@@ -46,45 +46,46 @@ export interface SensorRecord {
  * @description Represents a camera device
  */
 export interface Camera {
-    id: string;
-    name: string;
-    shedId: string; // Foreign key to link to a Shed
-    penId?: string; // Optional foreign key to link to a specific Pen
-    status: 'online' | 'offline';
-    streamUrl: string; // URL for the raw video stream
-    thumbnailUrl?: string; // Optional URL for a preview image
+  id: string;
+  name: string;
+  shedId: string; // Foreign key to link to a Shed
+  penId?: string; // Optional foreign key to link to a specific Pen
+  status: 'online' | 'offline';
+  streamUrl: string; // URL for the raw video stream
+  thumbnailUrl?: string; // Optional URL for a preview image
 }
 
 /**
  * @description Represents a summary of all behaviors captured by a camera at a specific time
  */
 export interface BehaviorSummary {
-    id: string;
-    cameraId: string; // Foreign key to link to a Camera
-    timestamp: string; // ISO 8601 date string
-    eatingCount: number;
-    drinkingCount: number;
-    standingCount: number;
-    lyingCount: number;
+  id: string;
+  cameraId: string; // Foreign key to link to a Camera
+  timestamp: string; // ISO 8601 date string
+  eatingCount: number;
+  drinkingCount: number;
+  lickingCount: number;
+  standingCount: number;
+  lyingCount: number;
 }
 
 /**
  * @description Represents an individual animal
  */
 export interface Animal {
-    id: string;
-    type: 'Sheep' | 'Pig' | 'Rabbit'; // Example animal types
-    penId: string; // Foreign key to link to a Pen
+  id: string;
+  type: 'Sheep' | 'Pig' | 'Rabbit'; // Example animal types
+  penId: string; // Foreign key to link to a Pen
 }
 
 /**
  * @description Represents production performance data for an animal
  */
 export interface ProductionPerformance {
-    id: string;
-    animalId: string; // Foreign key to link to an Animal
-    type: 'feedIntake' | 'weightGain'; // Type of performance metric
-    granularity: 'daily' | 'weekly' | 'cycle'; // Time granularity of the statistic
-    value: number; // The actual value of the metric (e.g., in kg)
-    date: string; // The date for which the record is valid (e.g., '2023-10-27')
+  id: string;
+  animalId: string; // Foreign key to link to an Animal
+  type: 'feedIntake' | 'weightGain'; // Type of performance metric
+  granularity: 'daily' | 'weekly' | 'cycle'; // Time granularity of the statistic
+  value: number; // The actual value of the metric (e.g., in kg)
+  date: string; // The date for which the record is valid (e.g., '2023-10-27')
 }
