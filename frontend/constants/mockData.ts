@@ -171,7 +171,7 @@ export const mockSensorRecords: SensorRecord[] = [
 export const mockCameras: Camera[] = [
   {
     id: 'cam-a-01',
-    name: 'A区-全景摄像头',
+    name: 'A区摄像头',
     shedId: 'shed-a',
     status: 'online',
     streamUrl: 'https://example.com/stream/cam-a-01.m3u8',
@@ -179,7 +179,7 @@ export const mockCameras: Camera[] = [
   },
   {
     id: 'cam-b-01',
-    name: 'B区-产房全景',
+    name: 'B区摄像头',
     shedId: 'shed-b',
     status: 'offline',
     streamUrl: 'https://example.com/stream/cam-b-01.m3u8',
