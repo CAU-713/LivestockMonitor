@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from fastapi import APIRouter
 
 from app.services.yolo import YoloStream
-router = APIRouter(tags=["检测接口"])
+router = APIRouter(prefix="/detect", tags=["检测接口"])
 
 def mjpeg_generator(model_path: str, video_path: str):
     stream = YoloStream(model_path, video_path)
