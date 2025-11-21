@@ -7,7 +7,7 @@ import {
   BehaviorSummary,
   Animal,
   ProductionPerformance,
-} from '../types';
+} from '@/types';
 
 // =================================================================
 // 1. Shed List (羊舍列表)
