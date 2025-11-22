@@ -215,7 +215,8 @@
 
 .videoHeader {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center; /* keep items vertically aligned on one line */
+  flex-wrap: nowrap; /* avoid items wrapping on wide screens */
   gap: 12px 24px;
   margin-bottom: 12px;
 }
@@ -224,6 +225,7 @@
   display: flex;
   gap: 6px;
   font-size: 14px;
+  align-items: center; /* ensure label, value, and buttons line up */
 }
 
 .label {
@@ -272,6 +274,7 @@
 
   .videoHeader {
     flex-direction: column;
+    align-items: flex-start;
   }
   .videoPlayer {
     width: 100%;
