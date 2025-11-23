@@ -89,3 +89,36 @@ export interface ProductionPerformance {
   value: number; // The actual value of the metric (e.g., in kg)
   date: string; // The date for which the record is valid (e.g., '2023-10-27')
 }
+
+// =================================================================
+// Types for Charting (v2 - supports merged charts)
+// =================================================================
+
+/**
+ * @description Represents a single data point for a chart.
+ * Can contain multiple values if charts are merged.
+ */
+export interface ChartDataPoint {
+  time: string;
+  [key: string]: any; // Allows for multiple sensor values, e.g., { time: '10:00', 'sensor-a-t1': 22.5, 'sensor-a-t2': 23.1 }
+}
+
+/**
+ * @description Defines a single line to be drawn on the chart.
+ */
+export interface ChartLine {
+  dataKey: string; // Unique key for the line, e.g., 'sensor-a-t1' or 'value'
+  name: string;    // Name to display in the legend, e.g., 'A区-东侧温度计'
+  color: string;   // Color of the line
+}
+
+/**
+ * @description Represents a complete dataset for a single chart component, which can contain multiple lines.
+ */
+export interface MergedChartData {
+  title: string;          // The overall title of the chart, e.g., 'Temperature'
+  sensorType: Sensor['type'];
+  unit: '°C' | '%' | 'ppm';
+  lines: ChartLine[];     // An array of lines to draw
+  data: ChartDataPoint[]; // The actual data points for the chart
+}
