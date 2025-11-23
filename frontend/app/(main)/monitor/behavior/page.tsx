@@ -1,7 +1,7 @@
 // app/(main)/monitor/behavior/page.tsx
 'use client';
 import React, { useState } from 'react';
-import styles from './page.module.css';
+import { Container, Paper, Stack, Typography } from '@mui/material';
 
 import {
   mockSheds,
@@ -15,14 +15,8 @@ import BehaviorSummaryPanel from '../../../../components/monitor/BehaviorSummary
 
 import type { BehaviorSummary } from '../../../../types';
 
-// pick a default shed and camera for display (fall back gracefully)
-const defaultShed = mockSheds && mockSheds.length > 0 ? mockSheds[0] : null;
-const defaultCamera = (() => {
-  if (mockCameras && mockCameras.length === 0) return null;
-  // prefer a camera in the chosen shed if available
-  const camInShed = mockCameras.find((c) => c.shedId === defaultShed?.id);
-  return camInShed ?? mockCameras[0];
-})();
+const defaultShed = mockSheds?.[0] ?? null;
+const defaultCamera = mockCameras.find((c) => c.shedId === defaultShed?.id) ?? mockCameras[0] ?? null;
 
 const BehaviorPage = () => {
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(
@@ -32,19 +26,15 @@ const BehaviorPage = () => {
   const selectedCamera =
     mockCameras.find((c) => c.id === selectedCameraId) ?? defaultCamera;
 
-  // stable date formatter to avoid SSR/CSR locale differences
   const formatDate = (iso?: string) => {
     if (!iso) return '-';
     try {
-      const d = new Date(iso);
-      // produce stable, locale-independent timestamp: YYYY-MM-DD HH:mm:ss
-      return d.toISOString().replace('T', ' ').slice(0, 19);
+      return new Date(iso).toISOString().replace('T', ' ').slice(0, 19);
     } catch {
       return iso;
     }
   };
 
-  // latest summary for selected camera (used by status badges)
   const latestSummary =
     (mockBehaviorSummaries as BehaviorSummary[])
       .slice()
@@ -52,47 +42,40 @@ const BehaviorPage = () => {
       .find((s) => s.cameraId === selectedCamera?.id) ?? null;
 
   return (
-    <div className={styles.layout}>
-      <aside className={styles.sidebar}></aside>
-      <main className={styles.page}>
-        <div className={styles.wrapper}>
-          {/* 视频播放区域 + 上方信息*/}
-          <section className={styles.videoBlock}>
-            <header className={styles.videoHeader}>
+    <Container maxWidth="lg">
+      <Stack spacing={3.5}>
+        <Paper elevation={3} sx={{ p: 2.5, borderRadius: 3 }}>
+          <Stack spacing={1.5}>
+            <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} spacing={{ xs: 1.5, md: 3 }}>
               <CameraHeader
-                styles={styles}
                 sheds={mockSheds}
                 cameras={mockCameras}
                 selectedCameraId={selectedCameraId}
                 onSelectCamera={(id) => setSelectedCameraId(id)}
               />
-
-              <div className={styles.infoRow}>
-                <span className={styles.label}>视频源：</span>
-                <span className={styles.value}>
-                  {selectedCamera?.thumbnailUrl ??
-                    selectedCamera?.streamUrl ??
-                    '-'}
-                </span>
-              </div>
-            </header>
+              <Stack direction="row" spacing={1} sx={{ fontSize: 14, alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>视频源:</Typography>
+                <Typography variant="body2" fontWeight={500} sx={{ wordBreak: 'break-all' }}>
+                  {selectedCamera?.thumbnailUrl ?? selectedCamera?.streamUrl ?? '-'}
+                </Typography>
+              </Stack>
+            </Stack>
+            
             <VideoPlayer
-              styles={styles}
               videoKey={selectedCamera?.id ?? 'video-default'}
               src={selectedCamera?.streamUrl ?? undefined}
             />
-          </section>
+          </Stack>
+        </Paper>
 
-          <BehaviorSummaryPanel
-            styles={styles}
-            selectedCameraName={selectedCamera?.name ?? '-'}
-            latestTimestamp={latestSummary?.timestamp ?? undefined}
-            formatDate={formatDate}
-            summary={latestSummary}
-          />
-        </div>
-      </main>
-    </div>
+        <BehaviorSummaryPanel
+          selectedCameraName={selectedCamera?.name ?? '-'}
+          latestTimestamp={latestSummary?.timestamp ?? undefined}
+          formatDate={formatDate}
+          summary={latestSummary}
+        />
+      </Stack>
+    </Container>
   );
 };
 

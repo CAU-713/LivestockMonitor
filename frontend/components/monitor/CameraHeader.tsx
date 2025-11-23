@@ -1,19 +1,22 @@
 'use client';
 import React, { useState } from 'react';
-import Button from '@mui/material/Button';
-import Popover from '@mui/material/Popover';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import Collapse from '@mui/material/Collapse';
-import ListItemButton from '@mui/material/ListItemButton';
+import {
+  Button,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+  Collapse,
+  ListItemButton,
+  Stack,
+  Typography,
+} from '@mui/material';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 
 import type { Shed, Camera } from '../../types';
 
 type Props = {
-  styles: Record<string, string>;
   sheds: Shed[];
   cameras: Camera[];
   selectedCameraId: string | null;
@@ -21,7 +24,6 @@ type Props = {
 };
 
 export default function CameraHeader({
-  styles,
   sheds,
   cameras,
   selectedCameraId,
@@ -35,32 +37,31 @@ export default function CameraHeader({
   const selectedCamera =
     cameras.find((c) => c.id === selectedCameraId) ?? cameras[0] ?? null;
 
+  const handleSelectCamera = (id: string) => {
+    onSelectCamera(id);
+    setAnchorEl(null); // Close popover on selection
+  };
+
   return (
     <>
-      <div className={styles.infoRow}>
-        <span className={styles.label}>舍: </span>
-        <span className={styles.value}>
-          {sheds.find((s) => s.id === selectedCamera?.shedId)?.name ??
-            sheds[0]?.name ??
-            '-'}
-        </span>
-      </div>
+      <Stack direction="row" spacing={1} alignItems="center">
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>舍:</Typography>
+        <Typography variant="body2" fontWeight={500}>
+          {sheds.find((s) => s.id === selectedCamera?.shedId)?.name ?? sheds[0]?.name ?? '-'}
+        </Typography>
+      </Stack>
 
-      <div className={styles.infoRow} style={{ alignItems: 'center' }}>
-        <span className={styles.label}>摄像头：</span>
-        <span className={styles.value}>
+      <Stack direction="row" spacing={1.5} alignItems="center">
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>摄像头:</Typography>
+        <Typography variant="body2" fontWeight={500}>
           {selectedCamera?.name ?? selectedCamera?.id ?? '-'}
-        </span>
+        </Typography>
 
-        <div className={styles.dropdownWrapper}>
+        <div>
           <Button
-            variant='outlined'
-            size='small'
-            onClick={(e) =>
-              setAnchorEl((prev) =>
-                prev ? null : (e.currentTarget as HTMLElement)
-              )
-            }
+            variant="outlined"
+            size="small"
+            onClick={(e) => setAnchorEl(e.currentTarget)}
           >
             选择摄像头
           </Button>
@@ -71,51 +72,33 @@ export default function CameraHeader({
             onClose={() => setAnchorEl(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            PaperProps={{ style: { maxWidth: 340 } }}
+            PaperProps={{ sx: { maxWidth: 340, mt: 0.5 } }}
           >
-            <List dense style={{ width: 320 }}>
+            <List dense sx={{ width: 320 }}>
               {sheds.map((shed) => (
                 <div key={shed.id}>
-                  <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={() =>
-                        setExpandedShedId((prev) =>
-                          prev === shed.id ? null : shed.id
-                        )
-                      }
-                    >
-                      <ListItemText primary={shed.name} />
-                      {expandedShedId === shed.id ? (
-                        <ExpandLess />
-                      ) : (
-                        <ExpandMore />
-                      )}
-                    </ListItemButton>
-                  </ListItem>
-
-                  <Collapse
-                    in={expandedShedId === shed.id}
-                    timeout='auto'
-                    unmountOnExit
+                  <ListItemButton
+                    onClick={() => setExpandedShedId((prev) => (prev === shed.id ? null : shed.id))}
                   >
-                    <List component='div' disablePadding>
-                      {cameras.filter((c) => c.shedId === shed.id).length ===
-                        0 && (
-                        <ListItem>
-                          <ListItemText primary='(无摄像头)' />
-                        </ListItem>
+                    <ListItemText primary={shed.name} />
+                    {expandedShedId === shed.id ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+
+                  <Collapse in={expandedShedId === shed.id} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding sx={{ pl: 2 }}>
+                      {cameras.filter((c) => c.shedId === shed.id).length === 0 && (
+                        <ListItem><ListItemText secondary="(无摄像头)" /></ListItem>
                       )}
                       {cameras
                         .filter((c) => c.shedId === shed.id)
                         .map((cam) => (
-                          <ListItem key={cam.id} disablePadding>
-                            <ListItemButton
-                              selected={selectedCameraId === cam.id}
-                              onClick={() => onSelectCamera(cam.id)}
-                            >
-                              <ListItemText primary={cam.name} />
-                            </ListItemButton>
-                          </ListItem>
+                          <ListItemButton
+                            key={cam.id}
+                            selected={selectedCameraId === cam.id}
+                            onClick={() => handleSelectCamera(cam.id)}
+                          >
+                            <ListItemText primary={cam.name} />
+                          </ListItemButton>
                         ))}
                     </List>
                   </Collapse>
@@ -124,7 +107,7 @@ export default function CameraHeader({
             </List>
           </Popover>
         </div>
-      </div>
+      </Stack>
     </>
   );
 }

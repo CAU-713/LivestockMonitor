@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
+import { Box } from '@mui/material';
 
 type Props = {
-  styles: Record<string, string>;
   videoKey?: string;
   src?: string;
   autoPlay?: boolean;
@@ -11,21 +11,30 @@ type Props = {
 };
 
 const VideoPlayer = React.forwardRef<HTMLVideoElement, Props>(
-  ({ styles, videoKey, src, autoPlay = true, muted = true, controls = true }, ref) => {
+  ({ videoKey, src, autoPlay = true, muted = true, controls = true }, ref) => {
     return (
-      <div className={styles.videoPlayer}>
-        <video
+      <Box sx={{ width: '100%', minWidth: 0 }}>
+        <Box
+          component="video"
           ref={ref}
           key={videoKey ?? "video-default"}
-          className={styles.video}
           src={src ?? undefined}
           controls={controls}
           autoPlay={autoPlay}
           muted={muted}
+          sx={{
+            width: '100%',
+            aspectRatio: '16 / 9',
+            borderRadius: 2.5, // Corresponds to 10px if theme spacing is 4px
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'black',
+            objectFit: 'cover',
+          }}
         >
           Your browser does not support HTML5 video.
-        </video>
-      </div>
+        </Box>
+      </Box>
     );
   }
 );
