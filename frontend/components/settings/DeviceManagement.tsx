@@ -226,6 +226,7 @@ export default function DeviceManagement() {
                     e.stopPropagation();
                     handleOpenDialog(type);
                   }}
+                  component="span"
                   sx={{ mr: 1 }}
                 >
                   添加
@@ -251,6 +252,7 @@ export default function DeviceManagement() {
                     e.stopPropagation();
                     handleOpenDialog(type);
                   }}
+                  component="span"
                   sx={{ mr: 1 }}
                 >
                   添加
