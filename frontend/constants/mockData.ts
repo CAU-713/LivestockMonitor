@@ -16,8 +16,8 @@ import {
 // 1. Shed List (羊舍列表)
 // =================================================================
 export const mockSheds: Shed[] = [
-  { id: 'shed-a', name: 'A区-育肥羊舍', location: '牧场南区', livestockCount: 80 },
-  { id: 'shed-b', name: 'B区-母羊产房', location: '牧场北区', livestockCount: 25 },
+  { id: 'shed-a', name: 'A区-育肥羊舍', location: '畜舍南区', livestockCount: 80,area:600 },
+  { id: 'shed-b', name: 'B区-母羊产房', location: '畜舍北区', livestockCount: 25,area:400 },
 ];
 
 // =================================================================
@@ -37,10 +37,24 @@ export const mockSensors: Sensor[] = [
   { id: 'sensor-a-t2', name: 'A区-西侧温度计', shedId: 'shed-a', penId: 'pen-a2', type: 'Temperature', status: 'active', lastReading: 22.8 },
   { id: 'sensor-a-h1', name: 'A区-中央湿度计', shedId: 'shed-a', penId: 'pen-a1', type: 'Humidity', status: 'active', lastReading: 58 },
   { id: 'sensor-a-nh3', name: 'A区-氨气检测仪', shedId: 'shed-a', penId: 'pen-a2', type: 'Ammonia', status: 'active', lastReading: 12 },
+  { id: 'sensor-a-co2', name: 'A区-二氧化碳检测仪', shedId: 'shed-a', penId: 'pen-a1', type: 'CO2', status: 'active', lastReading: 850 },
+  { id: 'sensor-a-ch4', name: 'A区-甲烷检测仪', shedId: 'shed-a', penId: 'pen-a2', type: 'CH4', status: 'active', lastReading: 1.2 },
+  { id: 'sensor-a-o2', name: 'A区-含氧量传感器', shedId: 'shed-a', penId: 'pen-a1', type: 'Oxygen', status: 'active', lastReading: 20.8 },
+  { id: 'sensor-a-wind', name: 'A区-风速传感器', shedId: 'shed-a', penId: 'pen-a2', type: 'WindSpeed', status: 'active', lastReading: 0.8 },
+  { id: 'sensor-a-h2s', name: 'A区-硫化氢传感器', shedId: 'shed-a', penId: 'pen-a1', type: 'H2S', status: 'active', lastReading: 0.5 },
+  { id: 'sensor-a-pm', name: 'A区-颗粒物传感器', shedId: 'shed-a', penId: 'pen-a2', type: 'PM', status: 'active', lastReading: 35 },
+  { id: 'sensor-a-light', name: 'A区-光照强度传感器', shedId: 'shed-a', penId: 'pen-a1', type: 'Light', status: 'active', lastReading: 1200 },
   { id: 'sensor-b-t1', name: 'B区-产房温度计', shedId: 'shed-b', penId: 'pen-b1', type: 'Temperature', status: 'active', lastReading: 26.1 },
   { id: 'sensor-b-h1', name: 'B区-产房湿度计', shedId: 'shed-b', penId: 'pen-b1', type: 'Humidity', status: 'inactive', lastReading: 65 },
   { id: 'sensor-b-h2', name: 'B区-隔离区湿度计', shedId: 'shed-b', penId: 'pen-b1', type: 'Humidity', status: 'error', lastReading: 70 },
   { id: 'sensor-b-nh3', name: 'B区-氨气检测仪', shedId: 'shed-b', penId: 'pen-b1', type: 'Ammonia', status: 'active', lastReading: 8 },
+  { id: 'sensor-b-co2', name: 'B区-二氧化碳检测仪', shedId: 'shed-b', penId: 'pen-b1', type: 'CO2', status: 'active', lastReading: 920 },
+  { id: 'sensor-b-ch4', name: 'B区-甲烷检测仪', shedId: 'shed-b', penId: 'pen-b1', type: 'CH4', status: 'active', lastReading: 1.5 },
+  { id: 'sensor-b-o2', name: 'B区-含氧量传感器', shedId: 'shed-b', penId: 'pen-b1', type: 'Oxygen', status: 'active', lastReading: 20.5 },
+  { id: 'sensor-b-wind', name: 'B区-风速传感器', shedId: 'shed-b', penId: 'pen-b1', type: 'WindSpeed', status: 'active', lastReading: 0.6 },
+  { id: 'sensor-b-h2s', name: 'B区-硫化氢传感器', shedId: 'shed-b', penId: 'pen-b1', type: 'H2S', status: 'active', lastReading: 0.3 },
+  { id: 'sensor-b-pm', name: 'B区-颗粒物传感器', shedId: 'shed-b', penId: 'pen-b1', type: 'PM', status: 'active', lastReading: 42 },
+  { id: 'sensor-b-light', name: 'B区-光照强度传感器', shedId: 'shed-b', penId: 'pen-b1', type: 'Light', status: 'active', lastReading: 1500 },
 ];
 
 // =================================================================
@@ -125,6 +139,7 @@ export const mockDailyChartData: MergedChartData[] = [
 
 // --- KPI Calculations ---
 const totalLivestock = mockSheds.reduce((sum, shed) => sum + shed.livestockCount, 0);
+const totalArea = mockSheds.reduce((sum, shed) => sum + (shed.area || 0), 0);
 const onlineSensors = mockSensors.filter((s) => s.status === 'active').length;
 const onlineCameras = mockCameras.filter((c) => c.status === 'online').length;
 const avgTemperature = parseFloat((mockSensors.filter(s => s.type === 'Temperature' && s.lastReading).reduce((sum, s) => sum + s.lastReading!, 0) / mockSensors.filter(s => s.type === 'Temperature' && s.lastReading).length).toFixed(1)) || 0;
@@ -132,6 +147,7 @@ const avgAmmonia = parseFloat((mockSensors.filter(s => s.type === 'Ammonia' && s
 
 export const mockDashboardKPIs = {
   totalLivestock: { value: totalLivestock, unit: '只' },
+  totalArea: { value: totalArea, unit: '㎡' },
   deviceStatus: { value: `${onlineSensors + onlineCameras} / ${mockSensors.length + mockCameras.length}`, label: '在线设备' },
   avgTemperature: { value: avgTemperature, unit: '°C', status: avgTemperature > 25 ? 'warning' : 'normal' },
   avgAmmonia: { value: avgAmmonia, unit: 'ppm', status: avgAmmonia > 20 ? 'danger' : 'normal' },
@@ -159,7 +175,7 @@ const generateOverallTrend = (hours: number, valueGenerator: (i: number) => { av
 };
 
 export const mockOverallTemperatureTrend: MergedChartData = {
-  title: '牧场总览：平均温度趋势 (24h)',
+  title: '畜舍总览：平均温度趋势 (24h)',
   sensorType: 'Temperature',
   unit: '°C',
   lines: [
@@ -173,7 +189,7 @@ export const mockOverallTemperatureTrend: MergedChartData = {
 };
 
 export const mockOverallHumidityTrend: MergedChartData = {
-  title: '牧场总览：平均湿度趋势 (24h)',
+  title: '畜舍总览：平均湿度趋势 (24h)',
   sensorType: 'Humidity',
   unit: '%',
   lines: [
@@ -250,7 +266,7 @@ export const mockUsers: User[] = [
 export const mockAlertRules: AlertRule[] = [
   {
     id: '1',
-    name: '温度过高告警',
+    name: '温度过高',
     sensorName: '东侧温度计',
     condition: 'gt',
     threshold: 28,
@@ -259,7 +275,7 @@ export const mockAlertRules: AlertRule[] = [
   },
   {
     id: '2',
-    name: '温度过低告警',
+    name: '温度过低',
     sensorName: '西侧温度计',
     condition: 'lt',
     threshold: 15,
@@ -268,7 +284,7 @@ export const mockAlertRules: AlertRule[] = [
   },
   {
     id: '3',
-    name: '湿度过高告警',
+    name: '湿度过高',
     sensorName: '中央湿度计',
     condition: 'gt',
     threshold: 75,
@@ -277,7 +293,7 @@ export const mockAlertRules: AlertRule[] = [
   },
   {
     id: '4',
-    name: '湿度过低告警',
+    name: '湿度过低',
     sensorName: '南侧湿度计',
     condition: 'lt',
     threshold: 40,
@@ -286,7 +302,7 @@ export const mockAlertRules: AlertRule[] = [
   },
   {
     id: '5',
-    name: '氨气浓度超标',
+    name: '氨气浓度过高',
     sensorName: '氨气传感器',
     condition: 'gt',
     threshold: 25,
@@ -295,7 +311,7 @@ export const mockAlertRules: AlertRule[] = [
   },
   {
     id: '6',
-    name: '二氧化碳浓度超标',
+    name: '二氧化碳浓度过高',
     sensorName: 'CO2传感器',
     condition: 'gt',
     threshold: 1500,
@@ -304,7 +320,7 @@ export const mockAlertRules: AlertRule[] = [
   },
   {
     id: '7',
-    name: '通用设备异常告警',
+    name: '通用设备异常',
     sensorName: '所有设备',
     condition: 'eq',
     threshold: 0,

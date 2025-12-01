@@ -1,19 +1,17 @@
 // app/(main)/monitor/behavior/page.tsx
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Paper, Stack, Typography } from '@mui/material';
 
 import {
   mockSheds,
   mockCameras,
-  mockBehaviorSummaries,
 } from '../../../../constants/mockData';
 
 import CameraHeader from '../../../../components/monitor/CameraHeader';
 import VideoPlayer from '../../../../components/monitor/VideoPlayer';
-import BehaviorSummaryPanel from '../../../../components/monitor/BehaviorSummaryPanel';
 
-import type { BehaviorSummary } from '../../../../types';
+// types removed (no longer needed in this file)
 
 const defaultShed = mockSheds?.[0] ?? null;
 const defaultCamera = mockCameras.find((c) => c.shedId === defaultShed?.id) ?? mockCameras[0] ?? null;
@@ -23,23 +21,23 @@ const BehaviorPage = () => {
     defaultCamera?.id ?? null
   );
 
+  const [currentTime, setCurrentTime] = useState<string>(() => new Date().toLocaleString());
+
+  useEffect(() => {
+    const t = setInterval(() => setCurrentTime(new Date().toLocaleString()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   const selectedCamera =
     mockCameras.find((c) => c.id === selectedCameraId) ?? defaultCamera;
 
-  const formatDate = (iso?: string) => {
-    if (!iso) return '-';
-    try {
-      return new Date(iso).toISOString().replace('T', ' ').slice(0, 19);
-    } catch {
-      return iso;
-    }
-  };
-
-  const latestSummary =
-    (mockBehaviorSummaries as BehaviorSummary[])
-      .slice()
-      .reverse()
-      .find((s) => s.cameraId === selectedCamera?.id) ?? null;
+  // Prepare displayed video source: hide specific picsum sample image
+  const displayedSource = (() => {
+    const src = selectedCamera?.thumbnailUrl ?? selectedCamera?.streamUrl;
+    if (!src) return '-';
+    if (src.includes('picsum.photos/seed/cam-a-01/400/300')) return '-';
+    return src;
+  })();
 
   return (
     <Container maxWidth="lg">
@@ -54,10 +52,8 @@ const BehaviorPage = () => {
                 onSelectCamera={(id) => setSelectedCameraId(id)}
               />
               <Stack direction="row" spacing={1} sx={{ fontSize: 14, alignItems: 'center' }}>
-                <Typography variant="body2" color="text.secondary" fontWeight={500}>视频源:</Typography>
-                <Typography variant="body2" fontWeight={500} sx={{ wordBreak: 'break-all' }}>
-                  {selectedCamera?.thumbnailUrl ?? selectedCamera?.streamUrl ?? '-'}
-                </Typography>
+                <Typography variant="body2" color="text.secondary" fontWeight={500}>时间:</Typography>
+                <Typography variant="body2" fontWeight={500}>{currentTime}</Typography>
               </Stack>
             </Stack>
             
@@ -68,12 +64,7 @@ const BehaviorPage = () => {
           </Stack>
         </Paper>
 
-        <BehaviorSummaryPanel
-          selectedCameraName={selectedCamera?.name ?? '-'}
-          latestTimestamp={latestSummary?.timestamp ?? undefined}
-          formatDate={formatDate}
-          summary={latestSummary}
-        />
+        
       </Stack>
     </Container>
   );

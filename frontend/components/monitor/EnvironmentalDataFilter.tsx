@@ -121,12 +121,24 @@ const EnvironmentalDataFilter: React.FC<EnvironmentalDataFilterProps> = ({
             selectedCount > 0 && selectedCount < sensorsInGroup.length;
 
           return (
-            <li key={params.key}>
+            <Box
+              key={params.key}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.5,
+                pl: 1.5,
+                pt: 0.5,
+                pb: 0.5,
+                borderLeft: '1px solid #e0e0e0',
+                ml: 1,
+                mr: 1,
+              }}
+            >
               <Box
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  pl: 1.5,
                   cursor: 'pointer',
                 }}
                 onClick={() => handleToggleGroup(params.group)}
@@ -140,7 +152,7 @@ const EnvironmentalDataFilter: React.FC<EnvironmentalDataFilterProps> = ({
                 </Typography>
               </Box>
               {params.children}
-            </li>
+            </Box>
           );
         }}
       />

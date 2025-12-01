@@ -56,22 +56,49 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
             <Typography color="text.secondary">所有设备运行正常</Typography>
         </Box>
       ) : (
-        <List dense>
-          {devices.map((device) => {
-            const shedName = mockSheds.find(shed => shed.id === device.shedId)?.name || '未知羊舍';
-            return (
-              <ListItem key={device.id} secondaryAction={getStatusChip(device.status)}>
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  {getStatusIcon(device.status)}
-                </ListItemIcon>
-                <ListItemText
-                  primary={device.name}
-                  secondary={`${device.deviceType} @ ${shedName}`}
-                />
-              </ListItem>
-            );
-          })}
-        </List>
+        <>
+          <Box sx={{ display: 'flex', px: 2, py: 0.75, alignItems: 'center' }}>
+            <Box sx={{ minWidth: 40 }} />
+            <Typography variant="subtitle2" fontWeight={500} sx={{ flex: 1, ml: 2, fontSize: 16 }}>
+              设备名
+            </Typography>
+            <Typography variant="subtitle2" fontWeight={500} sx={{ width: 80, fontSize: 16, textAlign: 'right' }}>
+              设备情况
+            </Typography>
+          </Box>
+          <List dense sx={{ py: 0 }}>
+            {devices.map((device) => {
+              const shedName = mockSheds.find(shed => shed.id === device.shedId)?.name || '未知羊舍';
+              return (
+                <ListItem
+                  key={device.id}
+                  secondaryAction={
+                    <Box sx={{ width: 80, display: 'flex', justifyContent: 'flex-end' }}>
+                      {getStatusChip(device.status)}
+                    </Box>
+                  }
+                  sx={{ px: 2 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    {getStatusIcon(device.status)}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={device.name}
+                    secondary={`${device.deviceType} @ ${shedName}`}
+                    sx={{
+                      flex: 1,
+                      '.MuiListItemText-primary': {
+                        textOverflow: 'ellipsis',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                      },
+                    }}
+                  />
+                </ListItem>
+              );
+            })}
+          </List>
+        </>
       )}
     </Paper>
   );

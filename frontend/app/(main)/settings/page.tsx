@@ -67,7 +67,7 @@ export default function SettingsPage() {
         >
           <Tab label="用户管理" id="settings-tab-0" aria-controls="settings-tabpanel-0" />
           <Tab label="设备管理" id="settings-tab-1" aria-controls="settings-tabpanel-1" />
-          <Tab label="告警规则" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
+          <Tab label="警告规则" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
         </Tabs>
 
         <Box sx={{ p: 3 }}>
