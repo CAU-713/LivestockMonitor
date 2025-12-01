@@ -170,3 +170,9 @@ web/.yarn/*
 # Docusaurus
 .docusaurus
 .cache-loader
+
+# PyTorch model files
+*.pt
+
+# MP4 video files
+*.mp4
