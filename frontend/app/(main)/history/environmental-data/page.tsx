@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Box,
+  Button,
   FormControl,
   InputLabel,
   Select,
@@ -21,6 +22,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs, { Dayjs } from 'dayjs';
 
 import LineChart from '@/components/charts/LineChart';
+import ExportButton from '@/components/ui/ExportButton';
 import {
   mockSheds,
   mockSensors,
@@ -88,6 +90,92 @@ const HistoricalEnvironmentalDataPage = () => {
   };
   const handleMergeChange = (event: React.ChangeEvent<HTMLInputElement>) =>
     setMergeCharts(event.target.checked);
+
+  // Export CSV with UTF-8 BOM for Excel compatibility
+  const handleExportCSV = () => {
+    if (!chartData || chartData.length === 0) return;
+
+    const escapeCell = (v: any): string => {
+      if (v === null || v === undefined) return '""';
+      const s = String(v);
+      return '"' + s.replace(/"/g, '""') + '"';
+    };
+
+    // Collect all columns and unique times
+    const columns: { key: string; header: string }[] = [];
+    const timeSet = new Set<string>();
+
+    chartData.forEach((chart) => {
+      if (chart.lines.length === 1 && chart.lines[0].dataKey === 'value') {
+        const colKey = `${chart.title}`;
+        columns.push({ key: colKey, header: colKey });
+        chart.data.forEach((d) => timeSet.add(d.time));
+      } else {
+        chart.lines.forEach((line) => {
+          columns.push({
+            key: `${chart.title}@@${line.dataKey}`,
+            header: `${chart.title}-${line.name}`,
+          });
+        });
+        chart.data.forEach((d) => timeSet.add(d.time));
+      }
+    });
+
+    const times = Array.from(timeSet).sort((a, b) => a.localeCompare(b));
+
+    // Build value map
+    const valueMap: Record<string, Record<string, any>> = {};
+    chartData.forEach((chart) => {
+      if (chart.lines.length === 1 && chart.lines[0].dataKey === 'value') {
+        const key = `${chart.title}`;
+        valueMap[key] = {};
+        chart.data.forEach((d) => {
+          valueMap[key][d.time] = (d as any).value;
+        });
+      } else {
+        chart.lines.forEach((line) => {
+          const key = `${chart.title}@@${line.dataKey}`;
+          valueMap[key] = {};
+        });
+        chart.data.forEach((d) => {
+          chart.lines.forEach((line) => {
+            const key = `${chart.title}@@${line.dataKey}`;
+            valueMap[key][d.time] = (d as any)[line.dataKey];
+          });
+        });
+      }
+    });
+
+    // Build CSV rows
+    const headerRow = ['时间', ...columns.map((c) => c.header)]
+      .map(escapeCell)
+      .join(',');
+    const rows: string[] = [headerRow];
+
+    times.forEach((t) => {
+      const rowCells = [escapeCell(t)];
+      columns.forEach((col) => {
+        const raw = valueMap[col.key]?.[t];
+        rowCells.push(escapeCell(raw));
+      });
+      rows.push(rowCells.join(','));
+    });
+
+    // Add UTF-8 BOM to ensure Excel recognizes encoding
+    const csvContent = '\uFEFF' + rows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute(
+      'download',
+      `environmental_data_${dayjs().format('YYYYMMDD_HHmmss')}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const availableSensors = useMemo(() => {
     if (selectedShedId === 'all') return mockSensors;
@@ -242,6 +330,63 @@ const HistoricalEnvironmentalDataPage = () => {
     mergeCharts,
   ]);
 
+  // Convert chartData to exportable format
+  const exportData = useMemo(() => {
+    if (!chartData || chartData.length === 0) return [];
+
+    const columns: { key: string; header: string }[] = [];
+    const timeSet = new Set<string>();
+
+    chartData.forEach((chart) => {
+      if (chart.lines.length === 1 && chart.lines[0].dataKey === 'value') {
+        const colKey = `${chart.title}`;
+        columns.push({ key: colKey, header: colKey });
+        chart.data.forEach((d) => timeSet.add(d.time));
+      } else {
+        chart.lines.forEach((line) => {
+          columns.push({
+            key: `${chart.title}@@${line.dataKey}`,
+            header: `${chart.title}-${line.name}`,
+          });
+        });
+        chart.data.forEach((d) => timeSet.add(d.time));
+      }
+    });
+
+    const times = Array.from(timeSet).sort((a, b) => a.localeCompare(b));
+
+    const valueMap: Record<string, Record<string, any>> = {};
+    chartData.forEach((chart) => {
+      if (chart.lines.length === 1 && chart.lines[0].dataKey === 'value') {
+        const key = `${chart.title}`;
+        valueMap[key] = {};
+        chart.data.forEach((d) => {
+          valueMap[key][d.time] = (d as any).value;
+        });
+      } else {
+        chart.lines.forEach((line) => {
+          const key = `${chart.title}@@${line.dataKey}`;
+          valueMap[key] = {};
+        });
+        chart.data.forEach((d) => {
+          chart.lines.forEach((line) => {
+            const key = `${chart.title}@@${line.dataKey}`;
+            valueMap[key][d.time] = (d as any)[line.dataKey];
+          });
+        });
+      }
+    });
+
+    const headers = ['时间', ...columns.map((c) => c.header)];
+    return times.map((t) => {
+      const row: Record<string, any> = { '时间': t };
+      columns.forEach((col, idx) => {
+        row[headers[idx + 1]] = valueMap[col.key]?.[t] ?? '';
+      });
+      return row;
+    });
+  }, [chartData]);
+
   const TimePickerComponent =
     granularity === 'moment' ? DateTimePicker : DatePicker;
 
@@ -298,7 +443,7 @@ const HistoricalEnvironmentalDataPage = () => {
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+            <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
               <ToggleButtonGroup
                 value={granularity}
                 exclusive
@@ -309,13 +454,35 @@ const HistoricalEnvironmentalDataPage = () => {
                 <ToggleButton value='day'>天</ToggleButton>
               </ToggleButtonGroup>
             </Box>
-            <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 2' } }}>
-              <FormControlLabel
-                control={
-                  <Switch checked={mergeCharts} onChange={handleMergeChange} />
-                }
-                label='合并图表'
-              />
+            <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 5, pl: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Switch checked={mergeCharts} onChange={handleMergeChange} />
+                  }
+                  label='合并图表'
+                  sx={{ m: 0 }}
+                />
+                <Button
+                  variant='outlined'
+                  size='small'
+                  onClick={handleExportCSV}
+                  sx={{
+                    textTransform: 'none',
+                    px: 2,
+                    py: 0.75,
+                    fontSize: '0.875rem',
+                    color: '#000000',
+                    borderColor: '#cccccc',
+                    '&:hover': {
+                      borderColor: '#999999',
+                      backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  导出数据
+                </Button>
+              </Box>
             </Box>
             <Box sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
               <TimePickerComponent

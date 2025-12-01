@@ -39,7 +39,7 @@ const SensorStatusList: React.FC<SensorStatusListProps> = ({ sensors }) => {
           <TableRow>
             <TableCell>传感器ID</TableCell>
             <TableCell>名称</TableCell>
-            <TableCell>所属舍</TableCell> {/* Changed from ID to Name */}
+            <TableCell>所属舍</TableCell>{/* Changed from ID to Name */}
             <TableCell>类型</TableCell>
             <TableCell>状态</TableCell>
             <TableCell align='right'>最新读数</TableCell>
@@ -53,7 +53,7 @@ const SensorStatusList: React.FC<SensorStatusListProps> = ({ sensors }) => {
                   {sensor.id}
                 </TableCell>
                 <TableCell>{sensor.name}</TableCell>
-                <TableCell>{sensor.shedName}</TableCell>{' '}
+                <TableCell>{sensor.shedName}</TableCell>
                 {/* Display shedName */}
                 <TableCell>{sensor.type}</TableCell>
                 <TableCell>

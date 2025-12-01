@@ -13,6 +13,7 @@ type Props = {
   summary: BehaviorSummary | null;
   rangeStart?: string;
   rangeEnd?: string;
+  headerAction?: React.ReactNode;
 };
 
 function BehaviorChips({ summary }: { summary: BehaviorSummary | null }) {
@@ -52,6 +53,7 @@ export default function BehaviorSummaryPanel({
   summary,
   rangeStart,
   rangeEnd,
+  headerAction,
 }: Props) {
   const isHistorical = Boolean(rangeStart && rangeEnd);
 
@@ -59,7 +61,10 @@ export default function BehaviorSummaryPanel({
     <Paper elevation={3} sx={{ p: 2, borderRadius: 3 }}>
       <Stack spacing={1.5}>
         <Stack spacing={1}>
-            <Typography variant="h6" fontWeight={600}>{title}</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="h6" fontWeight={600}>{title}</Typography>
+              {headerAction}
+            </Stack>
             <Typography variant="caption" color="text.secondary" suppressHydrationWarning>
             {isHistorical ? (
                 <>

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Container, Paper, Typography, Stack } from '@mui/material';
+import { Box, Container, Paper, Typography, Stack, Button } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -9,6 +9,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import CameraHeader from '../../../../components/monitor/CameraHeader';
 import VideoPlayer from '../../../../components/monitor/VideoPlayer';
 import BehaviorSummaryPanel from '../../../../components/monitor/BehaviorSummaryPanel';
+import ExportButton from '../../../../components/ui/ExportButton';
 
 import { mockSheds, mockCameras } from '../../../../constants/mockData';
 import type { BehaviorSummary } from '../../../../types';
@@ -69,9 +70,21 @@ export default function HistoryVideoPage() {
     seekToRangeStart();
   }, [startTime, seekToRangeStart]);
 
-
   const selectedCamera = mockCameras.find((c) => c.id === selectedCameraId) ?? defaultCamera;
   const formatDate = (date: Dayjs) => date.format('YYYY-MM-DD HH:mm:ss');
+
+  // Prepare behavior data for export
+  const behaviorExportData = [
+    {
+      '时间': formatDate(endTime),
+      '摄像头': selectedCamera?.name ?? '-',
+      '采食次数': avgSummary.eatingCount,
+      '饮水次数': avgSummary.drinkingCount,
+      '舔舐次数': avgSummary.lickingCount,
+      '站立次数': avgSummary.standingCount,
+      '躺卧次数': avgSummary.lyingCount,
+    },
+  ];
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -139,6 +152,12 @@ export default function HistoryVideoPage() {
             rangeEnd={endTime.toISOString()}
             formatDate={(iso) => iso ? dayjs(iso).format('YYYY-MM-DD HH:mm:ss') : '-'}
             summary={avgSummary}
+            headerAction={
+              <ExportButton
+                data={behaviorExportData}
+                fileName='behavior_data'
+              />
+            }
           />
         </Stack>
       </Container>

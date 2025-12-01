@@ -8,6 +8,8 @@ import {
   ProductionPerformance,
   MergedChartData,
   SensorRecord,
+  User,
+  AlertRule,
 } from '@/types';
 
 // =================================================================
@@ -183,3 +185,163 @@ export const mockOverallHumidityTrend: MergedChartData = {
     return { avg, max: avg + 5 + Math.random() * 2, min: avg - 5 - Math.random() * 2 };
   }),
 };
+
+// ============ User Management Mock Data ============
+export const mockUsers: User[] = [
+  {
+    id: '1',
+    username: 'admin_john',
+    email: 'john@livestock.com',
+    role: 'admin',
+    status: 'active',
+    createdAt: '2024-01-15',
+  },
+  {
+    id: '2',
+    username: 'user_sarah',
+    email: 'sarah@livestock.com',
+    role: 'user',
+    status: 'active',
+    createdAt: '2024-02-20',
+  },
+  {
+    id: '3',
+    username: 'user_mike',
+    email: 'mike@livestock.com',
+    role: 'user',
+    status: 'active',
+    createdAt: '2024-03-10',
+  },
+  {
+    id: '4',
+    username: 'visitor_lisa',
+    email: 'lisa@livestock.com',
+    role: 'visitor',
+    status: 'active',
+    createdAt: '2024-03-15',
+  },
+  {
+    id: '5',
+    username: 'user_david',
+    email: 'david@livestock.com',
+    role: 'user',
+    status: 'inactive',
+    createdAt: '2024-04-01',
+  },
+  {
+    id: '6',
+    username: 'visitor_emma',
+    email: 'emma@livestock.com',
+    role: 'visitor',
+    status: 'active',
+    createdAt: '2024-05-12',
+  },
+  {
+    id: '7',
+    username: 'admin_robert',
+    email: 'robert@livestock.com',
+    role: 'admin',
+    status: 'active',
+    createdAt: '2024-06-01',
+  },
+];
+
+// ============ Alert Rules Mock Data ============
+export const mockAlertRules: AlertRule[] = [
+  {
+    id: '1',
+    name: '温度过高告警',
+    sensorName: '东侧温度计',
+    condition: 'gt',
+    threshold: 28,
+    notificationMethod: 'email',
+    enabled: true,
+  },
+  {
+    id: '2',
+    name: '温度过低告警',
+    sensorName: '西侧温度计',
+    condition: 'lt',
+    threshold: 15,
+    notificationMethod: 'both',
+    enabled: true,
+  },
+  {
+    id: '3',
+    name: '湿度过高告警',
+    sensorName: '中央湿度计',
+    condition: 'gt',
+    threshold: 75,
+    notificationMethod: 'sms',
+    enabled: true,
+  },
+  {
+    id: '4',
+    name: '湿度过低告警',
+    sensorName: '南侧湿度计',
+    condition: 'lt',
+    threshold: 40,
+    notificationMethod: 'email',
+    enabled: false,
+  },
+  {
+    id: '5',
+    name: '氨气浓度超标',
+    sensorName: '氨气传感器',
+    condition: 'gt',
+    threshold: 25,
+    notificationMethod: 'both',
+    enabled: true,
+  },
+  {
+    id: '6',
+    name: '二氧化碳浓度超标',
+    sensorName: 'CO2传感器',
+    condition: 'gt',
+    threshold: 1500,
+    notificationMethod: 'email',
+    enabled: true,
+  },
+  {
+    id: '7',
+    name: '通用设备异常告警',
+    sensorName: '所有设备',
+    condition: 'eq',
+    threshold: 0,
+    notificationMethod: 'both',
+    enabled: true,
+  },
+  {
+    id: '8',
+    name: '光照强度异常',
+    sensorName: '光照传感器',
+    condition: 'lt',
+    threshold: 100,
+    notificationMethod: 'email',
+    enabled: false,
+  },
+];
+
+// ============ Alert Rules Constants ============
+export const SENSOR_NAMES = [
+  '东侧温度计',
+  '西侧温度计',
+  '中央湿度计',
+  '南侧湿度计',
+  '氨气传感器',
+  'CO2传感器',
+  '光照传感器',
+  '所有设备',
+];
+
+export const CONDITIONS = [
+  { value: 'gt', label: '大于 (>)' },
+  { value: 'lt', label: '小于 (<)' },
+  { value: 'eq', label: '等于 (=)' },
+];
+
+export const NOTIFICATION_METHODS = [
+  { value: 'email', label: '邮件' },
+  { value: 'sms', label: '短信' },
+  { value: 'both', label: '邮件和短信' },
+];

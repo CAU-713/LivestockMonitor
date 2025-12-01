@@ -122,3 +122,28 @@ export interface MergedChartData {
   lines: ChartLine[];     // An array of lines to draw
   data: ChartDataPoint[]; // The actual data points for the chart
 }
+
+/**
+ * @description Represents a system user
+ */
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: 'admin' | 'user' | 'visitor';
+  status: 'active' | 'inactive';
+  createdAt: string;
+}
+
+/**
+ * @description Represents an alert rule
+ */
+export interface AlertRule {
+  id: string;
+  name: string;
+  sensorName: string;
+  condition: 'gt' | 'lt' | 'eq'; // greater than, less than, equal
+  threshold: number;
+  notificationMethod: 'email' | 'sms' | 'both';
+  enabled: boolean;
+}
