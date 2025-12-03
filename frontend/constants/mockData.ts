@@ -61,9 +61,9 @@ export const mockSensors: Sensor[] = [
 // 4. Camera List (摄像头列表)
 // =================================================================
 export const mockCameras: Camera[] = [
-    { id: 'cam-a-01', name: 'A区-全景摄像头', shedId: 'shed-a', status: 'online', streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', thumbnailUrl: 'https://picsum.photos/seed/cam-a-01/400/300' },
-    { id: 'cam-a-02', name: 'A区-1号圈摄像头', shedId: 'shed-a', penId: 'pen-a1', status: 'online', streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', thumbnailUrl: 'https://picsum.photos/seed/cam-a-02/400/300' },
-    { id: 'cam-b-01', name: 'B区-1号圈摄像头', shedId: 'shed-b', penId: 'pen-b1', status: 'offline', streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', thumbnailUrl: 'https://picsum.photos/seed/cam-b-01/400/300' },
+    { id: 'cam-a-01', name: 'A区-全景摄像头', shedId: 'shed-a', status: 'online', streamUrl: 'http://localhost:8000/detect/infer?model=app/checkpoints/v8.pt&video=app/videos/test.mp4', thumbnailUrl: 'https://picsum.photos/seed/cam-a-01/400/300' },
+    { id: 'cam-a-02', name: 'A区-1号圈摄像头', shedId: 'shed-a', penId: 'pen-a1', status: 'online', streamUrl: 'http://localhost:8000/detect/infer?model=app/checkpoints/v8.pt&video=app/videos/test.mp4', thumbnailUrl: 'https://picsum.photos/seed/cam-a-02/400/300' },
+    { id: 'cam-b-01', name: 'B区-1号圈摄像头', shedId: 'shed-b', penId: 'pen-b1', status: 'offline', streamUrl: 'http://localhost:8000/detect/infer?model=app/checkpoints/v8.pt&video=app/videos/test.mp4', thumbnailUrl: 'https://picsum.photos/seed/cam-b-01/400/300' },
 ];
 
 // =================================================================

@@ -100,10 +100,7 @@ export default function HistoryVideoPage() {
                   onSelectCamera={(id) => setSelectedCameraId(id)}
                 />
                 <Stack direction="row" spacing={1} sx={{ fontSize: 14, alignItems: 'center' }}>
-                  <Typography variant="body2" color="text.secondary" fontWeight={500}>视频源:</Typography>
-                  <Typography variant="body2" fontWeight={500} sx={{ wordBreak: 'break-all' }}>
-                    {selectedCamera?.thumbnailUrl ?? selectedCamera?.streamUrl ?? '-'}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary" fontWeight={500}></Typography>
                 </Stack>
               </Stack>
               

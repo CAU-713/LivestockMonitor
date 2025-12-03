@@ -101,12 +101,15 @@ const EnvironmentalDataFilter: React.FC<EnvironmentalDataFilterProps> = ({
             }}
           />
         )}
-        renderOption={(props, option, { selected }) => (
-          <li {...props}>
-            <Checkbox style={{ marginRight: 8 }} checked={selected} />
-            {`${option.name} (${option.type})`}
-          </li>
-        )}
+        renderOption={(props, option, { selected }) => {
+          const { key, ...restProps } = props;
+          return (
+            <li key={key} {...restProps}>
+              <Checkbox style={{ marginRight: 8 }} checked={selected} />
+              {`${option.name} (${option.type})`}
+            </li>
+          );
+        }}
         // Return null to prevent default tags from rendering, as we handle it in renderInput
         renderTags={() => null}
         renderGroup={(params) => {

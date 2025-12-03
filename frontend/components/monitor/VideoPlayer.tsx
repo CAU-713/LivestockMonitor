@@ -10,55 +10,49 @@ type Props = {
   controls?: boolean;
 };
 
-const VideoPlayer = React.forwardRef<HTMLVideoElement, Props>(
+const VideoPlayer = React.forwardRef<any, Props>(
   ({ videoKey, src, autoPlay = true, muted = true, controls = true }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
     const hlsRef = useRef<any>(null);
+
+    // 检查是否是MJPEG流
+    const isMjpeg = src?.includes('/detect/infer');
 
     useEffect(() => {
       if (!src) return;
 
-      const video = videoRef.current;
-      if (!video) return;
-
-      // 检查是否是 HLS 流
-      if (src.endsWith('.m3u8')) {
-        // 动态导入 HLS.js
-        import('hls.js').then((HLSModule) => {
-          const HLS = HLSModule.default;
-          
-          if (HLS.isSupported()) {
-            if (hlsRef.current) {
-              hlsRef.current.destroy();
-            }
-            
-            const hls = new HLS();
-            hlsRef.current = hls;
-            hls.loadSource(src);
-            hls.attachMedia(video);
-            
-            if (autoPlay) {
-              video.play().catch(() => {
-                // 自动播放失败，这在某些浏览器中是正常的
-              });
-            }
-          } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Safari 原生支持 HLS
-            video.src = src;
-            if (autoPlay) {
-              video.play().catch(() => {});
-            }
-          }
-        }).catch((err) => {
-          console.error('Failed to load HLS.js:', err);
-          // 降级处理：直接设置 src，依赖浏览器原生支持
-          video.src = src;
-        });
+      if (isMjpeg) {
+        // MJPEG流处理
+        const img = imgRef.current;
+        if (img) {
+          img.src = src;
+        }
       } else {
-        // 普通视频格式，直接设置
-        video.src = src;
-        if (autoPlay) {
-          video.play().catch(() => {});
+        // 原有视频流处理
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (src.endsWith('.m3u8')) {
+          import('hls.js').then((HLSModule) => {
+            const HLS = HLSModule.default;
+            if (HLS.isSupported()) {
+              if (hlsRef.current) hlsRef.current.destroy();
+              const hls = new HLS();
+              hlsRef.current = hls;
+              hls.loadSource(src);
+              hls.attachMedia(video);
+              if (autoPlay) video.play().catch(() => {});
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+              video.src = src;
+              if (autoPlay) video.play().catch(() => {});
+            }
+          }).catch(() => {
+            video.src = src;
+          });
+        } else {
+          video.src = src;
+          if (autoPlay) video.play().catch(() => {});
         }
       }
 
@@ -68,46 +62,53 @@ const VideoPlayer = React.forwardRef<HTMLVideoElement, Props>(
           hlsRef.current = null;
         }
       };
-    }, [src, autoPlay]);
+    }, [src, autoPlay, isMjpeg]);
 
-    // 合并 refs
     useEffect(() => {
       if (ref) {
+        const element = isMjpeg ? imgRef.current : videoRef.current;
         if (typeof ref === 'function') {
-          ref(videoRef.current);
-        } else {
-          ref.current = videoRef.current;
+          ref(element);
+        } else if (ref) {
+          ref.current = element;
         }
       }
-    }, [ref]);
+    }, [ref, isMjpeg]);
 
     return (
       <Box sx={{ width: '100%', minWidth: 0 }}>
-        <video
-          ref={videoRef}
-          key={videoKey ?? "video-default"}
-          controls={controls}
-          muted={muted}
-          sx={{
-            width: '100%',
-            aspectRatio: '16 / 9',
-            borderRadius: 2.5,
-            border: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'black',
-            objectFit: 'cover',
-          }}
-          style={{
-            width: '100%',
-            aspectRatio: '16 / 9',
-            borderRadius: '10px',
-            border: '1px solid #e0e0e0',
-            backgroundColor: 'black',
-            objectFit: 'cover',
-          }}
-        >
-          Your browser does not support HTML5 video.
-        </video>
+        {isMjpeg ? (
+          <img
+            ref={imgRef}
+            key={videoKey ?? "mjpeg-default"}
+            style={{
+              width: '100%',
+              aspectRatio: '16 / 9',
+              borderRadius: '10px',
+              border: '1px solid #e0e0e0',
+              backgroundColor: 'black',
+              objectFit: 'cover',
+            }}
+            alt="视频流"
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            key={videoKey ?? "video-default"}
+            controls={controls}
+            muted={muted}
+            style={{
+              width: '100%',
+              aspectRatio: '16 / 9',
+              borderRadius: '10px',
+              border: '1px solid #e0e0e0',
+              backgroundColor: 'black',
+              objectFit: 'cover',
+            }}
+          >
+            Your browser does not support HTML5 video.
+          </video>
+        )}
       </Box>
     );
   }
