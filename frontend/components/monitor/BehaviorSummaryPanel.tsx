@@ -19,11 +19,11 @@ type Props = {
 function BehaviorChips({ summary }: { summary: BehaviorSummary | null }) {
   const theme = useTheme();
   const items = [
-    { key: 'standing', label: '站立 平均', value: summary?.standingCount ?? 0, color: 'success' },
-    { key: 'lying', label: '躺卧 平均', value: summary?.lyingCount ?? 0, color: 'secondary' },
-    { key: 'drinking', label: '饮水 平均', value: summary?.drinkingCount ?? 0, color: 'info' },
-    { key: 'eating', label: '进食 平均', value: summary?.eatingCount ?? 0, color: 'warning' },
-    { key: 'licking', label: '舔舐 平均', value: summary?.lickingCount ?? 0, color: 'error' },
+    { key: 'standing', label: '站立', value: summary?.standingCount ?? 0, color: 'success' },
+    { key: 'lying', label: '躺卧', value: summary?.lyingCount ?? 0, color: 'secondary' },
+    { key: 'drinking', label: '饮水', value: summary?.drinkingCount ?? 0, color: 'info' },
+    { key: 'eating', label: '进食', value: summary?.eatingCount ?? 0, color: 'warning' },
+    { key: 'licking', label: '舔舐', value: summary?.lickingCount ?? 0, color: 'error' },
   ] as const;
 
   return (
@@ -65,18 +65,6 @@ export default function BehaviorSummaryPanel({
               <Typography variant="h6" fontWeight={600}>{title}</Typography>
               {headerAction}
             </Stack>
-            <Typography variant="caption" color="text.secondary" suppressHydrationWarning>
-            {isHistorical ? (
-                <>
-                时间范围：<strong>{formatDate(rangeStart)}</strong> — <strong>{formatDate(rangeEnd)}</strong>。
-                区间平均值（mock）：最近更新时间 {formatDate(latestTimestamp)}
-                </>
-            ) : (
-                <>
-                基于摄像头 <strong>{selectedCameraName ?? '-'}</strong> 的最新汇总数据。 最近更新时间：{formatDate(latestTimestamp)}
-                </>
-            )}
-            </Typography>
         </Stack>
         <Divider />
         <BehaviorChips summary={summary} />

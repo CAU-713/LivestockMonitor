@@ -10,6 +10,7 @@ import {
 
 import CameraHeader from '../../../../components/monitor/CameraHeader';
 import VideoPlayer from '../../../../components/monitor/VideoPlayer';
+import BehaviorSummaryPanel from '../../../../components/monitor/BehaviorSummaryPanel';
 
 // types removed (no longer needed in this file)
 
@@ -61,10 +62,25 @@ const BehaviorPage = () => {
               videoKey={selectedCamera?.id ?? 'video-default'}
               src={selectedCamera?.streamUrl ?? undefined}
             />
+
+            <BehaviorSummaryPanel
+              title={'实时行为概览'}
+              selectedCameraName={selectedCamera?.name ?? '-'}
+              latestTimestamp={currentTime}
+              formatDate={(iso) => iso || '-'}
+              summary={{
+                id: 'real-time-1',
+                cameraId: selectedCameraId ?? '',
+                timestamp: new Date().toISOString(),
+                eatingCount: 6,
+                drinkingCount: 5,
+                lickingCount: 1,
+                standingCount: 12,
+                lyingCount: 8,
+              }}
+            />
           </Stack>
         </Paper>
-
-        
       </Stack>
     </Container>
   );
