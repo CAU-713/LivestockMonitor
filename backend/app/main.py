@@ -4,6 +4,8 @@ from typing import Union
 from app.config import settings
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routers import chatRouter, datasetRouter
 from app.config import create_db_and_tables
 import os
 import importlib
@@ -38,6 +40,36 @@ async def on_shutdown():
     # if camera_monitor_task:
     #     await camera_monitor_task.stop()
     pass
+
+
+# 配置 CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 注册路由
+app.include_router(chatRouter)
+app.include_router(datasetRouter)
+
+@app.get("/")
+async def root():
+    """健康检查"""
+    return {
+        "status": "ok",
+        "message": "RAGFlow FastAPI Server",
+        "version": settings.APP_VERSION
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """健康检查端点"""
+    return {"status": "healthy"}
+
 
 # 自动发现并注册路由
 routers_dir = os.path.join(os.path.dirname(__file__), "routers")

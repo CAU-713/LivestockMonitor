@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     db_user: str = os.getenv("DB_USER", "postgres")
     db_password: str = os.getenv("DB_PASSWORD", "password")
     db_name: str = os.getenv("DB_NAME", "postgres_db_name")
+    # RAGFlow 配置
+    RAGFLOW_API_KEY: str = os.getenv("RAGFLOW_API_KEY", "ragflow-wx5OgSXOaI_g5qFJNBN8nEdKyQJSaz4B4pAlQTSD-5Q")
+    RAGFLOW_BASE_URL: str = os.getenv("RAGFLOW_BASE_URL", "http://localhost:8666")
+
+    # CORS 配置
+    CORS_ORIGINS: list = ["*"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
