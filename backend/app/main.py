@@ -52,8 +52,8 @@ app.add_middleware(
 )
 
 # 注册路由
-app.include_router(chatRouter)
-app.include_router(datasetRouter)
+app.include_router(chatRouter.router)
+app.include_router(datasetRouter.router)
 
 @app.get("/")
 async def root():
