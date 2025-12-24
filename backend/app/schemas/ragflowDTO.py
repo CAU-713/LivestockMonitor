@@ -1,61 +1,80 @@
+"""
+RAGFlow 数据传输对象 (DTO)
+定义 RAGFlow API 接口的请求和响应格式
+"""
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 
 
 class ChatRequest(BaseModel):
-    """聊天请求模型"""
-    question: str = Field(..., description="用户问题")
-    session_id: Optional[str] = Field(None, description="会话ID")
-    chat_id: str = Field(..., description="聊天助手ID")
-    stream: bool = Field(False, description="是否流式输出")
+    """聊天请求 DTO"""
+    question: str = Field(..., description="用户提问内容")
+    session_id: Optional[str] = Field(None, description="会话 ID，如果为空则创建新会话")
+    chat_id: str = Field(..., description="RAGFlow 聊天助手 ID")
+    stream: bool = Field(False, description="是否使用流式响应")
 
 
-class ReferenceDTO(BaseModel):
-    """引用信息模型"""
-    content: str = Field(..., description="引用内容")
-    document_name: str = Field(..., description="文档名称")
-    document_id: Optional[str] = Field(None, description="文档ID")
-    similarity: float = Field(..., description="相似度分数")
-    dataset_id: Optional[str] = Field(None, description="数据集ID")
+class Reference(BaseModel):
+    """引用信息 DTO"""
+    content: str = Field("", description="引用的内容片段")
+    document_name: str = Field("未知文档", description="来源文档名称")
+    document_id: str = Field("", description="文档 ID")
+    similarity: float = Field(0, description="相似度评分")
+    dataset_id: str = Field("", description="数据集 ID")
+
+
+class ChatData(BaseModel):
+    """聊天响应数据 DTO"""
+    answer: str = Field(..., description="AI 回答内容")
+    session_id: str = Field(..., description="会话 ID")
+    references: Optional[List[Reference]] = Field(None, description="引用的文档片段列表")
 
 
 class ChatResponse(BaseModel):
-    """聊天响应模型"""
-    answer: str = Field(..., description="回答内容")
-    session_id: str = Field(..., description="会话ID")
-    references: Optional[List[ReferenceDTO]] = Field(None, description="参考来源")
+    """聊天响应 DTO"""
+    success: bool = Field(True, description="请求是否成功")
+    data: ChatData = Field(..., description="响应数据")
 
 
 class SessionCreate(BaseModel):
-    """创建会话请求"""
-    chat_id: str = Field(..., description="聊天助手ID")
+    """创建会话请求 DTO"""
+    chat_id: str = Field(..., description="聊天助手 ID")
     session_name: Optional[str] = Field("New Session", description="会话名称")
 
 
+class SessionData(BaseModel):
+    """会话数据 DTO"""
+    session_id: str = Field(..., description="会话 ID")
+    session_name: str = Field(..., description="会话名称")
+    chat_id: str = Field(..., description="关联的聊天助手 ID")
+
+
+class SessionResponse(BaseModel):
+    """会话响应 DTO"""
+    success: bool = Field(True, description="请求是否成功")
+    data: SessionData = Field(..., description="会话数据")
+
+
 class DatasetCreate(BaseModel):
-    """创建数据集请求"""
+    """创建数据集请求 DTO"""
     name: str = Field(..., description="数据集名称")
     description: Optional[str] = Field(None, description="数据集描述")
-    chunk_method: str = Field("naive", description="分块方法")
+    chunk_method: str = Field("naive", description="文档分块方法")
+
+
+class DatasetData(BaseModel):
+    """数据集数据 DTO"""
+    id: str = Field(..., description="数据集 ID")
+    name: str = Field(..., description="数据集名称")
+
+
+class DatasetResponse(BaseModel):
+    """数据集响应 DTO"""
+    success: bool = Field(True, description="请求是否成功")
+    data: DatasetData = Field(..., description="数据集数据")
 
 
 class DocumentUpload(BaseModel):
-    """上传文档请求"""
-    dataset_id: str = Field(..., description="数据集ID")
+    """上传文档请求 DTO"""
     display_name: str = Field(..., description="文档显示名称")
-    content: str = Field(..., description="文档内容（Base64或文本）")
-
-
-class ChatListResponse(BaseModel):
-    """聊天助手列表响应"""
-    id: str
-    name: str
-    description: Optional[str] = None
-
-
-class DatasetListResponse(BaseModel):
-    """数据集列表响应"""
-    id: str
-    name: str
-    chunk_count: int
-    document_count: int
+    content: str = Field(..., description="文档内容（Base64 编码或纯文本）")

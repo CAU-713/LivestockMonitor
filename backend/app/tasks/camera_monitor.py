@@ -7,10 +7,10 @@ from typing import List
 from sqlmodel import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.config import get_session
-from app.models.deviceDO import CameraDO
-from app.models.recordDataDO import BehaviorRecordDO
-from app.services.yolo import YoloStream
+from backend.app.config import get_session
+from backend.app.models.deviceDO import CameraDO
+from backend.app.models.recordDataDO import BehaviorRecordDO
+from backend.app.services.yolo import YoloStream
 
 # 配置日志
 logger = logging.getLogger(__name__)

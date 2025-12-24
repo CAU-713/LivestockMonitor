@@ -6,9 +6,9 @@
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
-from app.config import SessionDep
-from app.models.userDO import UserDO
-from app.schemas.userDTO import UserCreateDTO, UserReadDTO, UserUpdateDTO
+from backend.app.config import SessionDep
+from backend.app.models.userDO import UserDO
+from backend.app.schemas.userDTO import UserCreateDTO, UserReadDTO, UserUpdateDTO
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 

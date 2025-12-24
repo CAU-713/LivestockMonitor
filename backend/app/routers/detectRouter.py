@@ -3,7 +3,7 @@ from fastapi.responses import StreamingResponse
 
 from fastapi import APIRouter
 
-from app.services.yolo import YoloStream, mjpeg_generator
+from backend.app.services.yolo import YoloStream, mjpeg_generator
 router = APIRouter(prefix="/detect", tags=["检测接口"])
 
 @router.get("/infer")
