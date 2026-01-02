@@ -11,6 +11,7 @@ import {
   User,
   AlertRule,
 } from '@/types';
+import { ComfortAssessment } from '@/components/dashboard/ComfortAssessmentPanel';
 
 // =================================================================
 // 1. Shed List (羊舍列表)
@@ -19,6 +20,28 @@ export const mockSheds: Shed[] = [
   { id: 'shed-a', name: 'A区-育肥羊舍', location: '畜舍南区', livestockCount: 80,area:600 },
   { id: 'shed-b', name: 'B区-母羊产房', location: '畜舍北区', livestockCount: 25,area:400 },
 ];
+
+// =================================================================
+// 1.5 Comfort Assessment (环境舒适度评价)
+// =================================================================
+export const mockComfortAssessments: Record<string, ComfortAssessment> = {
+  'shed-a': {
+    status: 'comfort',
+    label: '舒适区',
+    color: '#4CAF50',
+    backgroundColor: '#4CAF50',
+    description: '环境条件优良，动物舒适度高，生长性能最佳',
+    thi: 68.5,
+  },
+  'shed-b': {
+    status: 'mild-heat-stress',
+    label: '轻度热应激',
+    color: '#FF9800',
+    backgroundColor: '#FF9800',
+    description: '环境温度偏高，动物可能出现轻微应激反应，需关注饮水和通风',
+    thi: 74.2,
+  },
+};
 
 // =================================================================
 // 2. Pen List (圈列表)

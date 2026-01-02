@@ -24,6 +24,7 @@ import AirIcon from '@mui/icons-material/Air';
 // Import Components and Data
 import KPICard from '../../../components/dashboard/KPICard';
 import DeviceStatusList from '../../../components/dashboard/AlertList';
+import ComfortAssessmentPanel from '../../../components/dashboard/ComfortAssessmentPanel';
 import LineChart from '../../../components/charts/LineChart';
 import {
   mockDashboardKPIs,
@@ -32,6 +33,7 @@ import {
   mockOfflineDevices,
   mockSheds,
   mockSensors,
+  mockComfortAssessments,
 } from '../../../constants/mockData';
 import { MergedChartData } from '@/types';
 
@@ -187,33 +189,39 @@ const DashboardPage = () => {
         return (
           <Grid item xs={12} md={6} key={shed.id}>
             <Paper elevation={2} sx={{ p: 2, borderRadius: 3 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                  <Typography variant="h6">{shed.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {shed.livestockCount} 只动物
-                  </Typography>
-                  <Stack direction="row" spacing={2} mt={1} flexWrap="wrap">
-                    <Typography variant="caption">温度: {avgTemp}°C</Typography>
-                    <Typography variant="caption">湿度: {avgHumidity}%</Typography>
-                    <Typography variant="caption">氨气: {avgAmmonia}ppm</Typography>
-                    <Typography variant="caption">CO₂: {avgCO2}ppm</Typography>
-                    <Typography variant="caption">甲烷: {avgCH4}ppm</Typography>
-                    <Typography variant="caption">含氧量: {avgOxygen}%</Typography>
-                    <Typography variant="caption">风速: {avgWindSpeed}m/s</Typography>
-                    <Typography variant="caption">硫化氢: {avgH2S}ppm</Typography>
-                    <Typography variant="caption">PM2.5/PM10: {avgPM}μg/m³</Typography>
-                    <Typography variant="caption">光照强度: {avgLight}lux</Typography>
-                  </Stack>
-                </Box>
-                <Button
-                  variant="contained"
-                  component={Link}
-                  href={`/monitor/environmental-data?shed=${shed.id}`}
-                  sx={{ whiteSpace: 'nowrap' }}  // 添加这个样式防止换行
-                >
-                  进入监控
-                </Button>
+              <Stack spacing={2}>
+                {/* 上部分：信息和按钮 */}
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Box>
+                    <Typography variant="h6">{shed.name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {shed.livestockCount} 只动物
+                    </Typography>
+                    <Stack direction="row" spacing={2} mt={1} flexWrap="wrap">
+                      <Typography variant="caption">温度: {avgTemp}°C</Typography>
+                      <Typography variant="caption">湿度: {avgHumidity}%</Typography>
+                      <Typography variant="caption">氨气: {avgAmmonia}ppm</Typography>
+                      <Typography variant="caption">CO₂: {avgCO2}ppm</Typography>
+                      <Typography variant="caption">甲烷: {avgCH4}ppm</Typography>
+                      <Typography variant="caption">含氧量: {avgOxygen}%</Typography>
+                      <Typography variant="caption">风速: {avgWindSpeed}m/s</Typography>
+                      <Typography variant="caption">硫化氢: {avgH2S}ppm</Typography>
+                      <Typography variant="caption">PM2.5/PM10: {avgPM}μg/m³</Typography>
+                      <Typography variant="caption">光照强度: {avgLight}lux</Typography>
+                    </Stack>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    component={Link}
+                    href={`/monitor/environmental-data?shed=${shed.id}`}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    进入监控
+                  </Button>
+                </Stack>
+
+                {/* 下部分：环境舒适度评价 */}
+                <ComfortAssessmentPanel assessment={mockComfortAssessments[shed.id]} />
               </Stack>
             </Paper>
           </Grid>
