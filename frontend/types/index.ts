@@ -8,6 +8,7 @@ export interface Shed {
   name: string;
   location: string;
   livestockCount: number;
+  area?: number; // Optional area property to fix type errors in mockData.ts
 }
 
 /**
@@ -27,7 +28,17 @@ export interface Sensor {
   name: string; // Custom name for the sensor, e.g., "East-side Temperature"
   shedId: string; // Foreign key to link to a Shed, for broad filtering
   penId: string; // Foreign key to link to a Pen, for specific matching
-  type: 'Temperature' | 'Humidity' | 'Ammonia'; // Example sensor types
+  type:
+    | 'Temperature'
+    | 'Humidity'
+    | 'Ammonia'
+    | 'CO2'
+    | 'CH4'
+    | 'Oxygen'
+    | 'WindSpeed'
+    | 'H2S'
+    | 'PM'
+    | 'Light'; // Example sensor types
   status: 'active' | 'inactive' | 'error';
   lastReading?: number; // Optional last reading value
 }
@@ -108,18 +119,27 @@ export interface ChartDataPoint {
  */
 export interface ChartLine {
   dataKey: string; // Unique key for the line, e.g., 'sensor-a-t1' or 'value'
-  name: string;    // Name to display in the legend, e.g., 'A区-东侧温度计'
-  color: string;   // Color of the line
+  name: string; // Name to display in the legend, e.g., 'A区-东侧温度计'
+  color: string; // Color of the line
+  yAxisId?: string; // ID of the Y-axis this line belongs to
+}
+
+export interface YAxisConfig {
+  id: string;
+  unit: string;
+  orientation?: 'left' | 'right';
+  color?: string;
 }
 
 /**
  * @description Represents a complete dataset for a single chart component, which can contain multiple lines.
  */
 export interface MergedChartData {
-  title: string;          // The overall title of the chart, e.g., 'Temperature'
-  sensorType: Sensor['type'];
-  unit: '°C' | '%' | 'ppm';
-  lines: ChartLine[];     // An array of lines to draw
+  title: string; // The overall title of the chart, e.g., 'Temperature'
+  sensorType: Sensor['type'] | 'Mixed';
+  unit?: string;
+  yAxes?: YAxisConfig[];
+  lines: ChartLine[]; // An array of lines to draw
   data: ChartDataPoint[]; // The actual data points for the chart
 }
 
