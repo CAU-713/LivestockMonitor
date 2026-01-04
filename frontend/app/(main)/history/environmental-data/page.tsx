@@ -12,8 +12,6 @@ import {
   SelectChangeEvent,
   ToggleButtonGroup,
   ToggleButton,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -22,7 +20,6 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs, { Dayjs } from 'dayjs';
 
 import LineChart from '@/components/charts/LineChart';
-import ExportButton from '@/components/ui/ExportButton';
 import {
   mockSheds,
   mockSensors,
@@ -30,9 +27,16 @@ import {
   mockDailyChartData,
   mockSensorRecords,
 } from '@/constants/mockData';
-import { Sensor, MergedChartData, ChartDataPoint } from '@/types';
+import {
+  Sensor,
+  MergedChartData,
+  ChartDataPoint,
+  YAxisConfig,
+  ChartLine,
+} from '@/types';
 
 type Granularity = 'moment' | 'hour' | 'day';
+type MergeMode = 'none' | 'type' | 'shed';
 
 const lineColors = [
   '#8884d8',
@@ -47,6 +51,30 @@ const lineColors = [
 ];
 const getColor = (index: number) => lineColors[index % lineColors.length];
 
+const getUnit = (type: string): string => {
+  switch (type) {
+    case 'Temperature':
+      return '°C';
+    case 'Humidity':
+      return '%';
+    case 'Ammonia':
+    case 'CO2':
+    case 'H2S':
+      return 'ppm';
+    case 'CH4':
+    case 'Oxygen':
+      return '%';
+    case 'WindSpeed':
+      return 'm/s';
+    case 'PM':
+      return 'µg/m³';
+    case 'Light':
+      return 'Lux';
+    default:
+      return '';
+  }
+};
+
 const HistoricalEnvironmentalDataPage = () => {
   const [selectedShedId, setSelectedShedId] = useState<string>('all');
   const [selectedSensorTypes, setSelectedSensorTypes] = useState<
@@ -57,7 +85,7 @@ const HistoricalEnvironmentalDataPage = () => {
     dayjs().subtract(30, 'day')
   );
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
-  const [mergeCharts, setMergeCharts] = useState<boolean>(false);
+  const [mergeMode, setMergeMode] = useState<MergeMode>('none');
 
   const handleShedChange = (event: SelectChangeEvent<string>) =>
     setSelectedShedId(event.target.value);
@@ -88,8 +116,24 @@ const HistoricalEnvironmentalDataPage = () => {
       }
     }
   };
-  const handleMergeChange = (event: React.ChangeEvent<HTMLInputElement>) =>
-    setMergeCharts(event.target.checked);
+  const handleMergeModeChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newMode: MergeMode | null
+  ) => {
+    if (newMode !== null) {
+      setMergeMode(newMode);
+    }
+  };
+
+  const availableSensors = useMemo(() => {
+    if (selectedShedId === 'all') return mockSensors;
+    return mockSensors.filter((sensor) => sensor.shedId === selectedShedId);
+  }, [selectedShedId]);
+
+  const availableSensorTypes = useMemo(
+    () => Array.from(new Set(availableSensors.map((sensor) => sensor.type))),
+    [availableSensors]
+  );
 
   // Export CSV with UTF-8 BOM for Excel compatibility
   const handleExportCSV = () => {
@@ -177,16 +221,6 @@ const HistoricalEnvironmentalDataPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const availableSensors = useMemo(() => {
-    if (selectedShedId === 'all') return mockSensors;
-    return mockSensors.filter((sensor) => sensor.shedId === selectedShedId);
-  }, [selectedShedId]);
-
-  const availableSensorTypes = useMemo(
-    () => Array.from(new Set(availableSensors.map((sensor) => sensor.type))),
-    [availableSensors]
-  );
-
   const chartData = useMemo((): MergedChartData[] => {
     const selectedSensors = availableSensors.filter((s) =>
       selectedSensorTypes.includes(s.type)
@@ -200,8 +234,8 @@ const HistoricalEnvironmentalDataPage = () => {
           dayjs(record.timestamp).isAfter(startDate) &&
           dayjs(record.timestamp).isBefore(endDate)
       );
-      if (mergeCharts) {
-        return selectedSensorTypes.map((type) => {
+      if (mergeMode === 'type') {
+        return selectedSensorTypes.map((type): MergedChartData => {
           const sensorsOfType = selectedSensors.filter((s) => s.type === type);
           const dataMap = new Map<string, ChartDataPoint>();
           sensorsOfType.forEach((sensor) => {
@@ -216,8 +250,7 @@ const HistoricalEnvironmentalDataPage = () => {
           return {
             title: `${type} Sensors`,
             sensorType: type,
-            unit:
-              type === 'Temperature' ? '°C' : type === 'Humidity' ? '%' : 'ppm',
+            unit: getUnit(type),
             lines: sensorsOfType.map((s, i) => ({
               dataKey: s.id,
               name: s.name,
@@ -228,16 +261,56 @@ const HistoricalEnvironmentalDataPage = () => {
             ),
           };
         });
+      } else if (mergeMode === 'shed') {
+        const sheds = Array.from(new Set(selectedSensors.map((s) => s.shedId)));
+        return sheds.map((shedId): MergedChartData => {
+          const sensorsInShed = selectedSensors.filter(
+            (s) => s.shedId === shedId
+          );
+          const shedName =
+            mockSheds.find((s) => s.id === shedId)?.name || shedId;
+
+          const typesInShed = Array.from(
+            new Set(sensorsInShed.map((s) => s.type))
+          );
+          const yAxes: YAxisConfig[] = typesInShed.map((type, index) => ({
+            id: type,
+            unit: getUnit(type),
+            orientation: index % 2 === 0 ? 'left' : 'right',
+            color: getColor(index),
+          }));
+
+          const dataMap = new Map<string, ChartDataPoint>();
+          sensorsInShed.forEach((sensor) => {
+            sensorRecords
+              .filter((r) => r.sensorId === sensor.id)
+              .forEach((record) => {
+                const time = dayjs(record.timestamp).format('HH:mm');
+                if (!dataMap.has(time)) dataMap.set(time, { time });
+                dataMap.get(time)![sensor.id] = record.value;
+              });
+          });
+
+          return {
+            title: `${shedName} Overview`,
+            sensorType: 'Mixed',
+            yAxes,
+            lines: sensorsInShed.map((s, i) => ({
+              dataKey: s.id,
+              name: s.name,
+              color: getColor(i),
+              yAxisId: s.type,
+            })),
+            data: Array.from(dataMap.values()).sort((a, b) =>
+              a.time.localeCompare(b.time)
+            ),
+          };
+        });
       } else {
         return selectedSensors.map((sensor) => ({
           title: sensor.name,
           sensorType: sensor.type,
-          unit:
-            sensor.type === 'Temperature'
-              ? '°C'
-              : sensor.type === 'Humidity'
-                ? '%'
-                : 'ppm',
+          unit: getUnit(sensor.type),
           lines: [{ dataKey: 'value', name: sensor.name, color: getColor(0) }],
           data: sensorRecords
             .filter((r) => r.sensorId === sensor.id)
@@ -272,13 +345,13 @@ const HistoricalEnvironmentalDataPage = () => {
           : null;
       return (
         selectedSensors.some((s) => s.name === d.title || s.id === sensorId) &&
-        selectedSensorTypes.includes(d.sensorType)
+        selectedSensorTypes.includes(d.sensorType as Sensor['type'])
       );
     });
 
-    if (mergeCharts) {
+    if (mergeMode === 'type') {
       return selectedSensorTypes
-        .map((type) => {
+        .map((type): MergedChartData | null => {
           const dataOfType = relevantAggregatedData.filter(
             (d) => d.sensorType === type
           );
@@ -309,8 +382,68 @@ const HistoricalEnvironmentalDataPage = () => {
           return {
             title: `${type} Sensors${titleSuffix}`,
             sensorType: type,
-            unit:
-              type === 'Temperature' ? '°C' : type === 'Humidity' ? '%' : 'ppm',
+            unit: getUnit(type),
+            lines: newLines,
+            data: Array.from(dataMap.values()).sort((a, b) =>
+              a.time.localeCompare(b.time)
+            ),
+          };
+        })
+        .filter((d): d is MergedChartData => d !== null);
+    } else if (mergeMode === 'shed') {
+      const sheds = Array.from(new Set(selectedSensors.map((s) => s.shedId)));
+      return sheds
+        .map((shedId): MergedChartData | null => {
+          const sensorsInShed = selectedSensors.filter(
+            (s) => s.shedId === shedId
+          );
+          const shedName =
+            mockSheds.find((s) => s.id === shedId)?.name || shedId;
+
+          const dataForShed = relevantAggregatedData.filter((d) =>
+            sensorsInShed.some((s) => s.name === d.title)
+          );
+
+          if (dataForShed.length === 0) return null;
+
+          const typesInShed = Array.from(
+            new Set(dataForShed.map((d) => d.sensorType))
+          );
+          const yAxes: YAxisConfig[] = typesInShed.map((type, index) => ({
+            id: type as string,
+            unit: getUnit(type),
+            orientation: index % 2 === 0 ? 'left' : 'right',
+            color: getColor(index),
+          }));
+
+          const dataMap = new Map<string, ChartDataPoint>();
+          const newLines: ChartLine[] = [];
+
+          dataForShed.forEach((chart) => {
+            const sensor = sensorsInShed.find((s) => s.name === chart.title);
+            if (!sensor) return;
+
+            const lineKey = sensor.id;
+            if (!newLines.some((l) => l.dataKey === lineKey)) {
+              newLines.push({
+                dataKey: lineKey,
+                name: sensor.name,
+                color: getColor(newLines.length),
+                yAxisId: sensor.type,
+              });
+            }
+
+            chart.data.forEach((point) => {
+              if (!dataMap.has(point.time))
+                dataMap.set(point.time, { time: point.time });
+              dataMap.get(point.time)![lineKey] = point.value;
+            });
+          });
+
+          return {
+            title: `${shedName} Overview${titleSuffix}`,
+            sensorType: 'Mixed',
+            yAxes,
             lines: newLines,
             data: Array.from(dataMap.values()).sort((a, b) =>
               a.time.localeCompare(b.time)
@@ -325,67 +458,10 @@ const HistoricalEnvironmentalDataPage = () => {
     availableSensors,
     selectedSensorTypes,
     granularity,
-    startDate?.toISOString(),
+    startDate,
     endDate,
-    mergeCharts,
+    mergeMode,
   ]);
-
-  // Convert chartData to exportable format
-  const exportData = useMemo(() => {
-    if (!chartData || chartData.length === 0) return [];
-
-    const columns: { key: string; header: string }[] = [];
-    const timeSet = new Set<string>();
-
-    chartData.forEach((chart) => {
-      if (chart.lines.length === 1 && chart.lines[0].dataKey === 'value') {
-        const colKey = `${chart.title}`;
-        columns.push({ key: colKey, header: colKey });
-        chart.data.forEach((d) => timeSet.add(d.time));
-      } else {
-        chart.lines.forEach((line) => {
-          columns.push({
-            key: `${chart.title}@@${line.dataKey}`,
-            header: `${chart.title}-${line.name}`,
-          });
-        });
-        chart.data.forEach((d) => timeSet.add(d.time));
-      }
-    });
-
-    const times = Array.from(timeSet).sort((a, b) => a.localeCompare(b));
-
-    const valueMap: Record<string, Record<string, any>> = {};
-    chartData.forEach((chart) => {
-      if (chart.lines.length === 1 && chart.lines[0].dataKey === 'value') {
-        const key = `${chart.title}`;
-        valueMap[key] = {};
-        chart.data.forEach((d) => {
-          valueMap[key][d.time] = (d as any).value;
-        });
-      } else {
-        chart.lines.forEach((line) => {
-          const key = `${chart.title}@@${line.dataKey}`;
-          valueMap[key] = {};
-        });
-        chart.data.forEach((d) => {
-          chart.lines.forEach((line) => {
-            const key = `${chart.title}@@${line.dataKey}`;
-            valueMap[key][d.time] = (d as any)[line.dataKey];
-          });
-        });
-      }
-    });
-
-    const headers = ['时间', ...columns.map((c) => c.header)];
-    return times.map((t) => {
-      const row: Record<string, any> = { '时间': t };
-      columns.forEach((col, idx) => {
-        row[headers[idx + 1]] = valueMap[col.key]?.[t] ?? '';
-      });
-      return row;
-    });
-  }, [chartData]);
 
   const TimePickerComponent =
     granularity === 'moment' ? DateTimePicker : DatePicker;
@@ -455,14 +531,20 @@ const HistoricalEnvironmentalDataPage = () => {
               </ToggleButtonGroup>
             </Box>
             <Box sx={{ gridColumn: { xs: 'span 12', md: 'span 3' } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 5, pl: 3 }}>
-                <FormControlLabel
-                  control={
-                    <Switch checked={mergeCharts} onChange={handleMergeChange} />
-                  }
-                  label='合并图表'
-                  sx={{ m: 0 }}
-                />
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 2, pl: 3 }}
+              >
+                <ToggleButtonGroup
+                  value={mergeMode}
+                  exclusive
+                  onChange={handleMergeModeChange}
+                  size='small'
+                  aria-label='merge mode'
+                >
+                  <ToggleButton value='none'>不合并</ToggleButton>
+                  <ToggleButton value='type'>按类型</ToggleButton>
+                  <ToggleButton value='shed'>按舍</ToggleButton>
+                </ToggleButtonGroup>
                 <Button
                   variant='outlined'
                   size='small'
@@ -517,7 +599,7 @@ const HistoricalEnvironmentalDataPage = () => {
                 sx={{
                   gridColumn: {
                     xs: 'span 12',
-                    lg: mergeCharts ? 'span 12' : 'span 6',
+                    lg: mergeMode !== 'none' ? 'span 12' : 'span 6',
                   },
                 }}
               >
