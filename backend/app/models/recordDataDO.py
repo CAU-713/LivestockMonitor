@@ -1,5 +1,8 @@
-from sqlmodel import Field, SQLModel
 from typing import Optional, Dict, Any
+
+from sqlalchemy.dialects.postgresql import JSON
+from sqlmodel import Field, SQLModel
+
 
 class BehaviorRecordDO(SQLModel, table=True):
     """
@@ -22,4 +25,4 @@ class SensorRecordDO(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, description="记录唯一标识符")
     sensor_id: int = Field(foreign_key="sensordo.id", description="传感器ID")
     timestamp: str = Field(description="时间戳")
-    data: Dict[Any, Any] = Field(default={}, sa_type="JSON", description="传感器读数数据，JSON格式")
+    data: Dict[Any, Any] = Field(default={}, sa_type=JSON, description="传感器读数数据，JSON格式")

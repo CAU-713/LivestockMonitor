@@ -4,12 +4,12 @@ RAGFlow 聊天路由
 """
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from typing import List
-from backend.app.schemas.ragflowDTO import (
+
+from app.schemas.ragflowDTO import (
     ChatRequest, ChatResponse, SessionCreate, SessionResponse,
     DatasetCreate, DatasetResponse, DocumentUpload
 )
-from backend.app.services.ragflow import RAGFlowService
+from app.services.ragflow import RAGFlowService
 
 router = APIRouter(prefix="/ragflow", tags=["RAGFlow Chat"])
 

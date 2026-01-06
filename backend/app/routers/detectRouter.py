@@ -1,16 +1,17 @@
+from fastapi import APIRouter
 from fastapi import Query
 from fastapi.responses import StreamingResponse
+from typing import AsyncGenerator
 
-from fastapi import APIRouter
+from app.services.yolo import mjpeg_generator
 
-from backend.app.services.yolo import YoloStream, mjpeg_generator
 router = APIRouter(prefix="/detect", tags=["检测接口"])
 
-@router.get("/infer")
+@router.get("/infer", summary="AI检测接口", description="根据指定模型和视频源进行实时检测")
 def infer(
     model: str = Query(..., description="模型相对路径，如 checkpoints/v8.pt"),
     video: str = Query(..., description="视频相对路径或流媒体地址，如 videos/test.mp4 或 rtsp://example.com/stream")
-):
+) -> StreamingResponse:
     """
     立即返回 MJPEG 流（multipart/x-mixed-replace），
     前端 <img src="/infer?model=...&video=..."> 即可观看。

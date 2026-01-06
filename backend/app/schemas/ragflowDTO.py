@@ -2,8 +2,9 @@
 RAGFlow 数据传输对象 (DTO)
 定义 RAGFlow API 接口的请求和响应格式
 """
+from typing import Optional, List
+
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
 
 
 class ChatRequest(BaseModel):

@@ -7,3 +7,4 @@ psycopg2-binary==2.9.11
 sqlmodel
 opencv-python-headless==4.8.1.78
 ragflow-sdk==0.22.1
+numpy==1.26.4

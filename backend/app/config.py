@@ -1,10 +1,10 @@
 import os
 from functools import lru_cache
+from typing import Generator
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from sqlmodel import create_engine, Session, SQLModel
-from typing import Generator
 
 load_dotenv()
 
@@ -47,7 +47,7 @@ engine = create_engine(settings.database_url, echo=True)
 
 def create_db_and_tables():
     # 导入models包会自动加载所有模型
-    from backend.app import models
+    import app.models
     SQLModel.metadata.create_all(engine)
 
 

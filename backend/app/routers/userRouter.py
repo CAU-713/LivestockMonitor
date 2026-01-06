@@ -4,11 +4,13 @@
 """
 
 from typing import List
+
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
-from backend.app.config import SessionDep
-from backend.app.models.userDO import UserDO
-from backend.app.schemas.userDTO import UserCreateDTO, UserReadDTO, UserUpdateDTO
+
+from app.config import SessionDep
+from app.models.userDO import UserDO
+from app.schemas.userDTO import UserCreateDTO, UserReadDTO, UserUpdateDTO
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 
@@ -87,11 +89,11 @@ def update_user(
     session.refresh(db_user)
     return db_user
 
-@router.delete("/{user_id}", summary="删除用户", description="根据用户ID删除指定用户")
+@router.delete("/{user_id}", response_model=dict, summary="删除用户", description="根据用户ID删除指定用户")
 def delete_user(
     user_id: int, 
     session: SessionDep
-):
+) -> dict:
     """
     删除指定用户
     

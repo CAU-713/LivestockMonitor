@@ -2,11 +2,12 @@
 RAGFlow 服务
 实现 RAGFlow 的业务逻辑
 """
-from ragflow_sdk import RAGFlow
-from typing import Dict, Any, Optional, List
-import os
-from dotenv import load_dotenv
 import json
+import os
+from typing import Dict, Any, Optional, List
+
+from dotenv import load_dotenv
+from ragflow_sdk import RAGFlow
 
 # 加载环境变量
 load_dotenv()
