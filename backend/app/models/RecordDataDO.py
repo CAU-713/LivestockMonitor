@@ -26,9 +26,9 @@ class SensorRecordDO(SQLModel, table=True):
     timestamp: datetime = Field(description="时间戳")
     data: Dict[Any, Any] = Field(default={}, sa_type=JSON, description="传感器读数数据，JSON格式")
 
-class EnvironmentRecordDO(SQLModel, table=True):
+class HouseComprehensiveEnvironmentDO(SQLModel, table=True):
     """环境监测综合记录数据对象"""
-    __tablename__ = "environment_record"
+    __tablename__ = "house_comprehensive_environment"
 
     id: Optional[int] = Field(default=None, primary_key=True, description="记录唯一标识")
     shed_id: int = Field(foreign_key="shed.id", description="棚舍ID")
@@ -67,9 +67,9 @@ class EnvironmentRecordDO(SQLModel, table=True):
 
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow, description="记录创建时间")
 
-class FatteningEnvironmentRecordDO(SQLModel, table=True):
+class EnterpriseFatteningEnvironmentDO(SQLModel, table=True):
     """企业育肥环境数据记录对象"""
-    __tablename__ = "fattening_environment_record"
+    __tablename__ = "enterprise_fattening_environment"
 
     id: Optional[int] = Field(default=None, primary_key=True, description="记录唯一标识")
     record_time: datetime = Field(description="记录时间")

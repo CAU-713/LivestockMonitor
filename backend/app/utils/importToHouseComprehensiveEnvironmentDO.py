@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime
 import numpy as np
-from app.models.RecordDataDO import EnvironmentRecordDO
+from app.models.RecordDataDO import HouseComprehensiveEnvironmentDO
 
 
 def map_excel_to_model(row_data):
@@ -46,7 +46,7 @@ def map_excel_to_model(row_data):
     return mapped_data
 
 
-def import_environment_data_from_excel(excel_file_path, db_url, shed_id):
+def import_HouseComprehensiveEnvironmentDO_from_excel(excel_file_path, db_url, shed_id):
     """
     从Excel文件导入环境数据到PostgreSQL数据库
     """
@@ -73,7 +73,7 @@ def import_environment_data_from_excel(excel_file_path, db_url, shed_id):
         mapped_data.pop('id', None)  # 移除id字段，让数据库自动生成
 
         # 创建EnvironmentRecordDO实例
-        record = EnvironmentRecordDO(**mapped_data)
+        record = HouseComprehensiveEnvironmentDO(**mapped_data)
         records_to_insert.append(record)
 
         if (index + 1) % 100 == 0:
@@ -90,7 +90,7 @@ def import_environment_data_from_excel(excel_file_path, db_url, shed_id):
                     if 'id' in data_dict and data_dict['id'] is None:
                         data_dict.pop('id')
 
-                    conn.execute(EnvironmentRecordDO.__table__.insert(), data_dict)
+                    conn.execute(HouseComprehensiveEnvironmentDO.__table__.insert(), data_dict)
 
         print(f"成功导入 {len(records_to_insert)} 条环境记录到数据库")
 
@@ -101,12 +101,12 @@ def import_environment_data_from_excel(excel_file_path, db_url, shed_id):
 
 def main():
     # 配置参数
-    EXCEL_FILE_PATH = r"D:\25\LivestockMonitor\backend\app\datas\envs.xlsx"
+    EXCEL_FILE_PATH = "../datas/envs.xlsx"
     DB_URL = "postgresql://postgres:password@localhost:5432/postgres_db_name"
     SHED_ID = 1
 
     print("开始导入环境数据...")
-    import_environment_data_from_excel(EXCEL_FILE_PATH, DB_URL, SHED_ID)
+    import_HouseComprehensiveEnvironmentDO_from_excel(EXCEL_FILE_PATH, DB_URL, SHED_ID)
     print("数据导入完成！")
 
 

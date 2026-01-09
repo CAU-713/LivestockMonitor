@@ -4,11 +4,10 @@ python-dotenv==1.2.1
 uvicorn==0.38.0
 ultralytics==8.3.229
 psycopg2-binary==2.9.11
-sqlmodel
+sqlmodel==0.0.16
 opencv-python-headless==4.8.1.78
 ragflow-sdk==0.22.1
 numpy==1.26.4
-pandas
-openpyxl
-sqlalchemy
-psycopg2-binary
+pandas==2.2.2
+openpyxl==3.1.2
+sqlalchemy==2.0.29

@@ -1,10 +1,10 @@
 import pandas as pd
 from sqlalchemy import create_engine
 from datetime import datetime
-from app.models.RecordDataDO import FatteningEnvironmentRecordDO
+from app.models.RecordDataDO import EnterpriseFatteningEnvironmentDO
 
 
-def import_fattening_environment_data_from_csv(csv_file_path, db_url):
+def import_EnterpriseFatteningEnvironmentDO_from_csv(csv_file_path, db_url):
     """
     从CSV文件导入企业育肥环境数据到PostgreSQL数据库
     """
@@ -143,7 +143,7 @@ def import_fattening_environment_data_from_csv(csv_file_path, db_url):
             df_renamed[col] = pd.to_numeric(df_renamed[col], errors='coerce')
 
     # 选择有效的列
-    valid_columns = [col.name for col in FatteningEnvironmentRecordDO.__table__.columns]
+    valid_columns = [col.name for col in EnterpriseFatteningEnvironmentDO.__table__.columns]
     available_columns = [col for col in df_renamed.columns if col in valid_columns]
     df_filtered = df_renamed[available_columns]
 
@@ -154,7 +154,7 @@ def import_fattening_environment_data_from_csv(csv_file_path, db_url):
 
     try:
         df_filtered.to_sql(
-            name='fattening_environment_record',
+            name='enterprise_fattening_environment',
             con=engine,
             if_exists='append',
             index=False,
@@ -170,11 +170,11 @@ def import_fattening_environment_data_from_csv(csv_file_path, db_url):
 
 def main():
     # 配置参数
-    CSV_FILE_PATH = r"D:\25\LivestockMonitor\backend\app\datas\企业育肥环境数据.csv"
+    CSV_FILE_PATH = "../datas/企业育肥环境数据.csv"
     DB_URL = "postgresql://postgres:password@localhost:5432/postgres_db_name"
 
     print("开始导入企业育肥环境数据...")
-    import_fattening_environment_data_from_csv(CSV_FILE_PATH, DB_URL)
+    import_EnterpriseFatteningEnvironmentDO_from_csv(CSV_FILE_PATH, DB_URL)
     print("数据导入完成！")
 
 

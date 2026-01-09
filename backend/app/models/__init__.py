@@ -1,7 +1,7 @@
 # 自动导入所有模型
 from .DeviceDO import SensorDO, CameraDO
 from .FacilityDO import ShedDO, PenDO
-from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, EnvironmentRecordDO, FatteningEnvironmentRecordDO
+from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, HouseComprehensiveEnvironmentDO, EnterpriseFatteningEnvironmentDO
 from .UserDO import UserDO
 from .AlertDO import AlertDO
 from .AnimalDO import AnimalDO
@@ -18,8 +18,8 @@ __all__ = [
     "PenDO",
     "BehaviorRecordDO",
     "SensorRecordDO",
-    "EnvironmentRecordDO",
-    "FatteningEnvironmentRecordDO",
+    "HouseComprehensiveEnvironmentDO",
+    "EnterpriseFatteningEnvironmentDO",
     "UserDO",
     "AlertDO",
     "AnimalDO",
