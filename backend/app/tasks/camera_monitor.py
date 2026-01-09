@@ -8,8 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 
 from app.config import get_session
-from backend.app.models.deviceDO import CameraDO
-from backend.app.models.recordDataDO import BehaviorRecordDO
+from backend.app.models.DeviceDO import CameraDO
+from backend.app.models.RecordDataDO import BehaviorRecordDO
 from backend.app.services.yolo import YoloStream
 
 # 配置日志

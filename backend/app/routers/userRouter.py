@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 
 from app.config import SessionDep
-from app.models.userDO import UserDO
+from app.models.UserDO import UserDO
 from app.schemas.userDTO import UserCreateDTO, UserReadDTO, UserUpdateDTO
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
