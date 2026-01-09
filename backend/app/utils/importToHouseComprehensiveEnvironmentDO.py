@@ -1,8 +1,9 @@
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from datetime import datetime
 import numpy as np
 from app.models.RecordDataDO import HouseComprehensiveEnvironmentDO
+from app.models.FacilityDO import ShedDO
 
 
 def map_excel_to_model(row_data):
@@ -46,12 +47,40 @@ def map_excel_to_model(row_data):
     return mapped_data
 
 
+def ensure_shed_exists(engine, shed_id: int):
+    """
+    确保指定的shed_id在数据库中存在，如果不存在则创建一个
+    """
+    with engine.connect() as conn:
+        # 使用您提供的数据创建羊舍记录
+        conn.execute(
+            text(
+                "INSERT INTO shed (id, name, location, livestock_count, capacity, area, status, type, description) VALUES (:id, :name, :location, :livestock_count, :capacity, :area, :status, :type, :description)"),
+            {
+                "id": shed_id,
+                "name": "测试棚舍1",
+                "location": "测试区域A",
+                "livestock_count": 50,
+                "capacity": 100,
+                "area": 200.0,
+                "status": "active",
+                "type": 1,
+                "description": "用于数据导入的测试棚舍"
+            }
+        )
+        conn.commit()
+        print(f"已创建ID为 {shed_id} 的羊舍")
+
+
 def import_HouseComprehensiveEnvironmentDO_from_excel(excel_file_path, db_url, shed_id):
     """
     从Excel文件导入环境数据到PostgreSQL数据库
     """
     # 创建数据库引擎
     engine = create_engine(db_url)
+
+    # 确保目标shed存在
+    ensure_shed_exists(engine, shed_id)
 
     # 读取Excel文件
     df = pd.read_excel(excel_file_path)
@@ -103,7 +132,7 @@ def main():
     # 配置参数
     EXCEL_FILE_PATH = "../datas/envs.xlsx"
     DB_URL = "postgresql://postgres:password@localhost:5432/postgres_db_name"
-    SHED_ID = 1
+    SHED_ID = 9999
 
     print("开始导入环境数据...")
     import_HouseComprehensiveEnvironmentDO_from_excel(EXCEL_FILE_PATH, DB_URL, SHED_ID)
