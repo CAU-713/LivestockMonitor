@@ -8,3 +8,7 @@ sqlmodel
 opencv-python-headless==4.8.1.78
 ragflow-sdk==0.22.1
 numpy==1.26.4
+pandas
+openpyxl
+sqlalchemy
+psycopg2-binary
