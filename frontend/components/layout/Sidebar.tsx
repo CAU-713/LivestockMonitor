@@ -118,6 +118,13 @@ const Sidebar = () => {
             </ListItemButton>
           </List>
         </Collapse>
+
+        <ListItemButton component={Link} href='/knowledge'>
+          <ListItemIcon>
+            <DashboardIcon />
+          </ListItemIcon>
+          <ListItemText primary='智能问答' />
+        </ListItemButton>
       </List>
       <Divider />
       <List>
