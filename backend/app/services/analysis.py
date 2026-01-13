@@ -9,13 +9,13 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from scipy.stats import pearsonr
 from statsmodels.graphics.tsaplots import plot_acf
 from typing import Optional, List, Dict, Tuple, Any
 import warnings
-import os
-from datetime import datetime
+import io
+import base64
 
 warnings.filterwarnings('ignore')
 
@@ -27,20 +27,15 @@ plt.rcParams['axes.unicode_minus'] = False
 class DataAnalysisService:
     """数据分析服务"""
 
-    def __init__(self, db_url: str, output_dir: str = "output"):
+    def __init__(self, db_url: str):
         """
         初始化数据分析服务
 
         参数:
             db_url: 数据库连接URL
-            output_dir: 输出文件目录
         """
         self.engine = create_engine(db_url)
-        self.output_dir = output_dir
         self.df = None
-
-        # 创建输出目录
-        os.makedirs(output_dir, exist_ok=True)
 
     def load_data_from_db(
             self,
@@ -255,12 +250,12 @@ class DataAnalysisService:
             'strong_correlations': strong_pairs
         }
 
-    def generate_heatmap(self, filename: Optional[str] = None) -> str:
+    def generate_heatmap_base64(self) -> str:
         """
-        生成相关系数热力图
+        生成相关系数热力图（Base64编码）
 
         返回:
-            生成的文件路径
+            Base64编码的图片字符串
         """
         if self.df is None:
             raise ValueError("Please load data first")
@@ -271,13 +266,6 @@ class DataAnalysisService:
 
         # 转换为DataFrame
         corr_matrix = pd.DataFrame(corr_matrix_dict)
-
-        # 生成文件名
-        if filename is None:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f'correlation_heatmap_{timestamp}.png'
-
-        filepath = os.path.join(self.output_dir, filename)
 
         # 绘制热力图
         plt.figure(figsize=(14, 12))
@@ -299,22 +287,26 @@ class DataAnalysisService:
         plt.xticks(rotation=45, ha='right')
         plt.yticks(rotation=0)
         plt.tight_layout()
-        plt.savefig(filepath, dpi=150, bbox_inches='tight')
+
+        # 保存到内存
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
         plt.close()
 
-        return filepath
+        return image_base64
 
-    def generate_acf_plot(
+    def generate_acf_plot_base64(
             self,
             columns: Optional[List[str]] = None,
-            lags: int = 50,
-            filename: Optional[str] = None
+            lags: int = 50
     ) -> str:
         """
-        生成ACF分析图
+        生成ACF分析图（Base64编码）
 
         返回:
-            生成的文件路径
+            Base64编码的图片字符串
         """
         if self.df is None:
             raise ValueError("Please load data first")
@@ -338,13 +330,6 @@ class DataAnalysisService:
         if not valid_cols:
             raise ValueError("No valid columns for ACF analysis")
 
-        # 生成文件名
-        if filename is None:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f'acf_analysis_{timestamp}.png'
-
-        filepath = os.path.join(self.output_dir, filename)
-
         # 绘制ACF图
         n_cols = len(valid_cols)
         n_rows = (n_cols + 1) // 2
@@ -367,41 +352,46 @@ class DataAnalysisService:
             axes[j].set_visible(False)
 
         plt.tight_layout()
-        plt.savefig(filepath, dpi=150, bbox_inches='tight')
+
+        # 保存到内存
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
         plt.close()
 
-        return filepath
+        return image_base64
 
-    def save_results(self, prefix: str = 'analysis') -> List[str]:
+    def get_cleaned_data_csv(self) -> str:
         """
-        保存分析结果
+        获取清洗后的数据（CSV格式字符串）
 
         返回:
-            保存的文件列表
+            CSV格式的数据字符串
         """
         if self.df is None:
-            raise ValueError("No data to save")
+            raise ValueError("No data available")
 
-        saved_files = []
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        return self.df.to_csv(encoding='utf-8-sig')
 
-        # 保存清洗后的数据
-        csv_path = os.path.join(self.output_dir, f'{prefix}_cleaned_data_{timestamp}.csv')
-        self.df.to_csv(csv_path, encoding='utf-8-sig')
-        saved_files.append(csv_path)
+    def get_statistics_csv(self) -> str:
+        """
+        获取统计结果（CSV格式字符串）
 
-        # 保存统计结果
+        返回:
+            CSV格式的统计数据字符串
+        """
         stats = self.calculate_statistics()
         stats_df = pd.DataFrame(stats)
-        stats_path = os.path.join(self.output_dir, f'{prefix}_statistics_{timestamp}.csv')
-        stats_df.to_csv(stats_path, index=False, encoding='utf-8-sig')
-        saved_files.append(stats_path)
+        return stats_df.to_csv(index=False, encoding='utf-8-sig')
 
-        # 保存相关系数
+    def get_correlation_csv(self) -> str:
+        """
+        获取相关系数矩阵（CSV格式字符串）
+
+        返回:
+            CSV格式的相关系数矩阵字符串
+        """
         corr_result = self.calculate_correlation()
         corr_df = pd.DataFrame(corr_result['correlation_matrix'])
-        corr_path = os.path.join(self.output_dir, f'{prefix}_correlation_{timestamp}.csv')
-        corr_df.to_csv(corr_path, encoding='utf-8-sig')
-        saved_files.append(corr_path)
-
-        return saved_files
+        return corr_df.to_csv(encoding='utf-8-sig')

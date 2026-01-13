@@ -18,9 +18,9 @@ class DataAnalysisRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "table_name": "enterprise_fattening_environment",
-                "start_date": "2024-01-01",
-                "end_date": "2024-12-31",
-                "limit": 10000
+                "start_date": "2025-11-07",
+                "end_date": "2025-11-08",
+                "limit": 1000
             }
         }
 
@@ -67,7 +67,6 @@ class DataAnalysisResponse(BaseModel):
     cleaning_report: Optional[CleaningReport] = None
     statistics: Optional[List[StatisticsResponse]] = None
     correlation: Optional[CorrelationResponse] = None
-    files_generated: Optional[List[str]] = None
 
 
 class HeatmapRequest(BaseModel):
@@ -76,6 +75,13 @@ class HeatmapRequest(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     limit: Optional[int] = None
+
+
+class HeatmapResponse(BaseModel):
+    """热力图响应"""
+    image_base64: str
+    format: str = "png"
+    description: str = "Pearson Correlation Heatmap"
 
 
 class ACFAnalysisRequest(BaseModel):
@@ -93,7 +99,34 @@ class ACFAnalysisRequest(BaseModel):
                 "table_name": "enterprise_fattening_environment",
                 "columns": ["indoor_temperature", "outdoor_temperature", "indoor_humidity"],
                 "lags": 50,
-                "start_date": "2024-01-01",
-                "end_date": "2024-12-31"
+                "start_date": "2025-11-07",
+                "end_date": "2025-11-08"
+            }
+        }
+
+
+class ACFAnalysisResponse(BaseModel):
+    """ACF分析响应"""
+    image_base64: str
+    format: str = "png"
+    description: str = "ACF Stationarity Analysis"
+    columns_analyzed: List[str]
+
+
+class ExportDataRequest(BaseModel):
+    """导出数据请求"""
+    table_name: str = Field(default='enterprise_fattening_environment', description="数据表名")
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    limit: Optional[int] = None
+    data_type: str = Field(default='cleaned', description="数据类型: cleaned, statistics, correlation")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "table_name": "enterprise_fattening_environment",
+                "start_date": "2025-11-07",
+                "end_date": "2025-11-08",
+                "data_type": "cleaned"
             }
         }
