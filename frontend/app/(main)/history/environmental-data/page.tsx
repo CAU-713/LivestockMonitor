@@ -601,6 +601,7 @@ const HistoricalEnvironmentalDataPage = () => {
                     xs: 'span 12',
                     lg: mergeMode !== 'none' ? 'span 12' : 'span 6',
                   },
+                  height: 320,
                 }}
               >
                 <LineChart chartData={data} />

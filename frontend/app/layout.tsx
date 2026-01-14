@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ThemeRegistry from '../components/ThemeRegistry/ThemeRegistry';
+import ChatWidget from '../components/chat/ChatWidget';
 
 export const metadata: Metadata = {
   title: "Livestock Monitor",
@@ -16,6 +17,7 @@ export default function RootLayout({
       <body>
         <ThemeRegistry>
           {children}
+          <ChatWidget />
         </ThemeRegistry>
       </body>
     </html>

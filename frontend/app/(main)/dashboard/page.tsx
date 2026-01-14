@@ -106,7 +106,7 @@ const DashboardPage = () => {
       ))}
 
       {/* Row 2: Main Chart and Offline Devices */}
-      <Grid item xs={12} lg={8}>
+      <Grid item xs={12} lg={8} sx={{ height: 430}}>
         <Paper elevation={3} sx={{ p: 2, borderRadius: 3, height: '100%' }}>
           <Stack direction="row" alignItems="center" mb={2} spacing={2}>
             <Typography variant="h6">畜舍总体趋势</Typography>
