@@ -12,7 +12,7 @@ class SensorDO(SQLModel, table=True):
     name: str = Field(max_length=100, description="传感器名称")
     shed_id: int = Field(foreign_key="shed.id", description="所属羊舍ID")
     pen_id: Optional[int] = Field(default=None, foreign_key="pen.id", description="所属圈ID")
-    type: str = Field(max_length=50,
+    type: str = Field(foreign_key="sensor_type.id", max_length=50,
                       description="传感器类型: Temperature, Humidity, Ammonia, WindSpeed, CO2, CH4, Oxygen, H2S, PM, Light")
     status: str = Field(default="active", max_length=20,
                         description="传感器状态: active-正常, inactive-未激活, error-错误")
@@ -20,6 +20,14 @@ class SensorDO(SQLModel, table=True):
     last_calibration: Optional[date] = Field(default=None, description="最后校准日期")
     location: Optional[str] = Field(default=None, max_length=200, description="传感器安装位置")
     description: Optional[str] = Field(default=None, max_length=500, description="传感器描述")
+
+class SensorTypeDO(SQLModel, table=True):
+    """传感器类型数据对象"""
+    __tablename__ = "sensor_type"
+
+    id: str = Field(primary_key=True, description="传感器类型唯一标识符")
+    name: str = Field(max_length=100, description="传感器类型名称")
+    unit: str = Field(max_length=20, description="传感器单位")
 
 class CameraDO(SQLModel, table=True):
     """摄像头信息数据对象"""
