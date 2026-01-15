@@ -1,5 +1,5 @@
 # 自动导入所有模型
-from .DeviceDO import SensorDO, CameraDO
+from .DeviceDO import SensorDO, CameraDO, SensorTypeDO
 from .FacilityDO import ShedDO, PenDO
 from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, HouseComprehensiveEnvironmentDO, EnterpriseFatteningEnvironmentDO
 from .UserDO import UserDO
@@ -14,6 +14,7 @@ from .HealthDataDO import WeightRecordDO, FeedIntakeRecordDO, BodyTemperatureRec
 __all__ = [
     "SensorDO",
     "CameraDO",
+    "SensorTypeDO",
     "ShedDO",
     "PenDO",
     "BehaviorRecordDO",
