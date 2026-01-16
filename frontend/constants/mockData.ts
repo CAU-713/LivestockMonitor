@@ -879,3 +879,63 @@ export const NOTIFICATION_METHODS = [
   { value: 'sms', label: '短信' },
   { value: 'both', label: '邮件和短信' },
 ];
+
+// =================================================================
+// Chat Mock Data (聊天假数据)
+// =================================================================
+
+export interface ChatReference {
+  content: string;
+  document_name: string;
+  similarity: number;
+}
+
+export interface ChatMockResponse {
+  answer: string;
+  references: ChatReference[];
+}
+
+// 默认聊天回答 - 所有问题返回此固定回答
+export const defaultChatResponse: ChatMockResponse = {
+  answer: `感谢您的提问。我已收到您的问题，但目前作为演示版本，我将返回通用回答。
+
+在完整系统中，我会通过以下方式帮助您：
+1. 分析实时的环境监测数据
+2. 解读动物行为指标
+3. 提供饲养管理建议
+4. 回答关于设备运维的问题
+
+如需获取更详细的信息，请访问系统的分析模块或与管理员联系。
+
+（这是演示模式，所有问题返回此通用回答）`,
+  references: [
+    {
+      content: '畜牧监测系统使用指南 - 聊天功能说明',
+      document_name: '用户手册',
+      similarity: 0.85,
+    },
+    {
+      content: '常见问题解答（FAQ）',
+      document_name: '帮助文档',
+      similarity: 0.78,
+    },
+  ],
+};
+
+// 欢迎消息回答
+export const welcomeChatResponse: ChatMockResponse = {
+  answer: `欢迎咨询畜舍监测系统。我可以帮助您了解：
+• 实时环境监测数据
+• 动物行为分析
+• 设备管理和告警
+• 数据导出和分析
+
+请问您有什么需要帮助的吗？`,
+  references: [
+    {
+      content: '畜牧监测系统功能介绍',
+      document_name: '系统文档',
+      similarity: 0.95,
+    },
+  ],
+};

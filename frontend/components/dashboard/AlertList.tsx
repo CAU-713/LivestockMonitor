@@ -181,7 +181,7 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
                       <ListItemIcon sx={{ minWidth: 40 }}>{getSeverityIcon(w.severity)}</ListItemIcon>
                       <ListItemText
                         primary={w.title}
-                        secondary={`${w.message} · ${shedName} · ${new Date(w.timestamp).toLocaleString()}`}
+                        secondary={`${w.message} · ${shedName} · ${formatWarningTime(w.timestamp)}`}
                         sx={{
                           flex: 1,
                           '.MuiListItemText-primary': {
@@ -203,6 +203,12 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
       </Box>
     </Paper>
   );
+};
+
+// 格式化警告时间，避免 hydration 错误
+const formatWarningTime = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };
 
 export default DeviceStatusList;
