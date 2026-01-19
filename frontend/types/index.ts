@@ -169,3 +169,31 @@ export interface AlertRule {
   notificationMethod: 'email' | 'sms' | 'both';
   enabled: boolean;
 }
+
+// =================================================================
+// Types for Data Analysis
+// =================================================================
+
+/**
+ * @description Represents the statistical summary for a single variable.
+ */
+export interface StatisticsSummaryData {
+  variable: string;
+  mean: number;
+  variance: number;
+  std: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
+/**
+ * @description Represents a correlation matrix.
+ * The outer keys are variable names, and the inner keys are the variables they are compared against.
+ * @example { 'temp_in': { 'temp_out': 0.8, 'humidity': -0.5 } }
+ */
+export interface CorrelationMatrix {
+  [variable: string]: {
+    [otherVariable: string]: number;
+  };
+}

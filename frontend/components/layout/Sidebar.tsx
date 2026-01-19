@@ -19,6 +19,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import QueryStatsIcon from '@mui/icons-material/QueryStats'; // Icon for Data Analysis
 
 const DRAWER_WIDTH = 240;
 
@@ -46,11 +47,11 @@ const Sidebar = () => {
       <Divider />
       <List>
         {/* Dashboard */}
-        <ListItemButton component={Link} href='/dashboard'>
+        <ListItemButton component={Link} href="/dashboard">
           <ListItemIcon>
             <DashboardIcon />
           </ListItemIcon>
-          <ListItemText primary='总览' />
+          <ListItemText primary="总览" />
         </ListItemButton>
 
         {/* Realtime Monitor (Collapsible) */}
@@ -58,30 +59,30 @@ const Sidebar = () => {
           <ListItemIcon>
             <MonitorHeartIcon />
           </ListItemIcon>
-          <ListItemText primary='实时数据展示' />
+          <ListItemText primary="实时数据展示" />
           {realtimeOpen ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
-        <Collapse in={realtimeOpen} timeout='auto' unmountOnExit>
-          <List component='div' disablePadding>
+        <Collapse in={realtimeOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
             <ListItemButton
               sx={{ pl: 4 }}
               component={Link}
-              href='/monitor/environmental-data'
+              href="/monitor/environmental-data"
             >
               <ListItemIcon>
                 <SensorsIcon />
               </ListItemIcon>
-              <ListItemText primary='环境数据' />
+              <ListItemText primary="环境数据" />
             </ListItemButton>
             <ListItemButton
               sx={{ pl: 4 }}
               component={Link}
-              href='/monitor/behavior'
+              href="/monitor/behavior"
             >
               <ListItemIcon>
                 <VideocamIcon />
               </ListItemIcon>
-              <ListItemText primary='视频数据' />
+              <ListItemText primary="视频数据" />
             </ListItemButton>
           </List>
         </Collapse>
@@ -91,39 +92,49 @@ const Sidebar = () => {
           <ListItemIcon>
             <AnalyticsIcon />
           </ListItemIcon>
-          <ListItemText primary='历史数据' />{' '}
+          <ListItemText primary="历史数据" />{' '}
           {historyOpen ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
-        <Collapse in={historyOpen} timeout='auto' unmountOnExit>
-          <List component='div' disablePadding>
+        <Collapse in={historyOpen} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
             <ListItemButton
               sx={{ pl: 4 }}
               component={Link}
-              href='/history/environmental-data'
+              href="/history/environmental-data"
             >
               <ListItemIcon>
                 <SensorsIcon />
               </ListItemIcon>
-              <ListItemText primary='环境数据' />
+              <ListItemText primary="环境数据" />
             </ListItemButton>
             <ListItemButton
               sx={{ pl: 4 }}
               component={Link}
-              href='/history/video-data'
+              href="/history/data-analysis" // Link to the new page
+            >
+              <ListItemIcon>
+                <QueryStatsIcon />
+              </ListItemIcon>
+              <ListItemText primary="数据分析" />
+            </ListItemButton>
+            <ListItemButton
+              sx={{ pl: 4 }}
+              component={Link}
+              href="/history/video-data"
             >
               <ListItemIcon>
                 <VideocamIcon />
               </ListItemIcon>
-              <ListItemText primary='视频数据' />
+              <ListItemText primary="视频数据" />
             </ListItemButton>
           </List>
         </Collapse>
 
-        <ListItemButton component={Link} href='/knowledge'>
+        <ListItemButton component={Link} href="/knowledge">
           <ListItemIcon>
             <DashboardIcon />
           </ListItemIcon>
-          <ListItemText primary='智能问答' />
+          <ListItemText primary="智能问答" />
         </ListItemButton>
       </List>
       <Divider />
@@ -138,7 +149,7 @@ const Sidebar = () => {
 
   return (
     <Drawer
-      variant='permanent'
+      variant="permanent"
       sx={{
         width: DRAWER_WIDTH,
         flexShrink: 0,
