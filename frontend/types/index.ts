@@ -38,7 +38,8 @@ export interface Sensor {
     | 'WindSpeed'
     | 'H2S'
     | 'PM'
-    | 'Light'; // Example sensor types
+    | 'Light'
+    | 'Radiation'; // Example sensor types (热辐射，单位 W/m²)
   status: 'active' | 'inactive' | 'error';
   lastReading?: number; // Optional last reading value
 }

@@ -41,7 +41,6 @@ export const mockComfortAssessments: Record<string, ComfortAssessment> = {
     color: '#4CAF50',
     backgroundColor: '#4CAF50',
     description: '环境条件优良，动物舒适度高，生长性能最佳',
-    thi: 68.5,
   },
   'shed-b': {
     status: 'mild-heat-stress',
@@ -49,7 +48,6 @@ export const mockComfortAssessments: Record<string, ComfortAssessment> = {
     color: '#FF9800',
     backgroundColor: '#FF9800',
     description: '环境温度偏高，动物可能出现轻微应激反应，需关注饮水和通风',
-    thi: 74.2,
   },
 };
 
@@ -73,7 +71,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a1',
     type: 'Temperature',
     status: 'active',
-    lastReading: 22.5,
+    lastReading: 3.0,
   },
   {
     id: 'sensor-a-t2',
@@ -82,7 +80,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a2',
     type: 'Temperature',
     status: 'active',
-    lastReading: 22.8,
+    lastReading: 3.1,
   },
   {
     id: 'sensor-a-h1',
@@ -91,7 +89,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a1',
     type: 'Humidity',
     status: 'active',
-    lastReading: 58,
+    lastReading: 80,
   },
   {
     id: 'sensor-a-nh3',
@@ -136,7 +134,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a2',
     type: 'WindSpeed',
     status: 'active',
-    lastReading: 0.8,
+    lastReading: 0.2,
   },
   {
     id: 'sensor-a-h2s',
@@ -166,13 +164,22 @@ export const mockSensors: Sensor[] = [
     lastReading: 1200,
   },
   {
+    id: 'sensor-a-radiation',
+    name: 'A区-热辐射传感器',
+    shedId: 'shed-a',
+    penId: 'pen-a1',
+    type: 'Radiation',
+    status: 'active',
+    lastReading: 0.3, // W/m²
+  },
+  {
     id: 'sensor-b-t1',
     name: 'B区-产房温度计',
     shedId: 'shed-b',
     penId: 'pen-b1',
     type: 'Temperature',
     status: 'active',
-    lastReading: 26.1,
+    lastReading: 1.5,
   },
   {
     id: 'sensor-b-h1',
@@ -181,7 +188,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-b1',
     type: 'Humidity',
     status: 'inactive',
-    lastReading: 65,
+    lastReading: 70,
   },
   {
     id: 'sensor-b-h2',
@@ -263,6 +270,15 @@ export const mockSensors: Sensor[] = [
     type: 'Light',
     status: 'active',
     lastReading: 1500,
+  },
+  {
+    id: 'sensor-b-radiation',
+    name: 'B区-热辐射传感器',
+    shedId: 'shed-b',
+    penId: 'pen-b1',
+    type: 'Radiation',
+    status: 'active',
+    lastReading: 0.1, // W/m²
   },
 ];
 
