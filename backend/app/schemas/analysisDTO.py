@@ -12,7 +12,7 @@ class DataAnalysisRequest(BaseModel):
     table_name: str = Field(default='enterprise_fattening_environment', description="数据表名")
     start_date: Optional[str] = Field(None, description="起始日期 (YYYY-MM-DD)")
     end_date: Optional[str] = Field(None, description="结束日期 (YYYY-MM-DD)")
-    limit: Optional[int] = Field(None, description="限制读取行数")
+    limit: Optional[int] = Field(default=1000, description="限制读取行数")
 
     class Config:
         json_schema_extra = {
@@ -20,7 +20,6 @@ class DataAnalysisRequest(BaseModel):
                 "table_name": "enterprise_fattening_environment",
                 "start_date": "2025-11-07",
                 "end_date": "2025-11-08",
-                "limit": 1000
             }
         }
 
@@ -74,7 +73,7 @@ class HeatmapRequest(BaseModel):
     table_name: str = Field(default='enterprise_fattening_environment', description="数据表名")
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    limit: Optional[int] = None
+    limit: Optional[int] = Field(default=1000, description="限制读取行数")
 
 
 class HeatmapResponse(BaseModel):
@@ -91,12 +90,11 @@ class ACFAnalysisRequest(BaseModel):
     lags: int = Field(default=50, description="滞后阶数")
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    limit: Optional[int] = None
+    limit: Optional[int] = Field(default=1000, description="限制读取行数")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "table_name": "enterprise_fattening_environment",
                 "columns": ["indoor_temperature", "outdoor_temperature", "indoor_humidity"],
                 "lags": 50,
                 "start_date": "2025-11-07",
@@ -118,13 +116,12 @@ class ExportDataRequest(BaseModel):
     table_name: str = Field(default='enterprise_fattening_environment', description="数据表名")
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    limit: Optional[int] = None
+    limit: Optional[int] = Field(default=1000, description="限制读取行数")
     data_type: str = Field(default='cleaned', description="数据类型: cleaned, statistics, correlation")
 
     class Config:
         json_schema_extra = {
             "example": {
-                "table_name": "enterprise_fattening_environment",
                 "start_date": "2025-11-07",
                 "end_date": "2025-11-08",
                 "data_type": "cleaned"
