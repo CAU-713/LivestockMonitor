@@ -3,7 +3,8 @@
 提供便捷的响应生成方法
 """
 
-from typing import Optional, Any, List
+from typing import Any, List
+
 from app.schemas.responseDTO import ResponseDTO, ListResponseData
 
 

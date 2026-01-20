@@ -1,9 +1,7 @@
+from app.services.yolo import mjpeg_generator, video_only_generator
 from fastapi import APIRouter
 from fastapi import Query
 from fastapi.responses import StreamingResponse
-from typing import AsyncGenerator
-
-from app.services.yolo import mjpeg_generator, video_only_generator
 
 router = APIRouter(prefix="/detect", tags=["检测接口"])
 

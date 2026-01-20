@@ -1,7 +1,6 @@
 import pandas as pd
-from sqlalchemy import create_engine
-from datetime import datetime
 from app.models.RecordDataDO import EnterpriseFatteningEnvironmentDO
+from sqlalchemy import create_engine
 
 
 def import_EnterpriseFatteningEnvironmentDO_from_csv(csv_file_path, db_url):

@@ -4,10 +4,10 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import List
 
+from app.config import get_session
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import select
 
-from app.config import get_session
 from backend.app.models.DeviceDO import CameraDO
 from backend.app.models.RecordDataDO import BehaviorRecordDO
 from backend.app.services.yolo import YoloStream

@@ -2,9 +2,9 @@
 数据分析服务
 """
 
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ import seaborn as sns
 from sqlalchemy import create_engine
 from scipy.stats import pearsonr
 from statsmodels.graphics.tsaplots import plot_acf
-from typing import Optional, List, Dict, Tuple, Any
+from typing import Optional, List, Dict, Any
 import warnings
 import io
 import base64

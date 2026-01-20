@@ -2,11 +2,9 @@
 数据分析路由
 """
 
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.responses import StreamingResponse
-from typing import List
 import io
 
+from app.config import settings
 from app.schemas.analysisDTO import (
     DataAnalysisRequest,
     DataAnalysisResponse,
@@ -20,9 +18,10 @@ from app.schemas.analysisDTO import (
     ExportDataRequest
 )
 from app.schemas.responseDTO import ResponseDTO
-from app.utils.response import success, error, server_error
 from app.services.analysis import DataAnalysisService
-from app.config import settings
+from app.utils.response import success, error, server_error
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(
     prefix="/api/data-analysis",
