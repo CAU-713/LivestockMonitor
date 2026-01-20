@@ -2,12 +2,13 @@ import asyncio
 import importlib
 import os
 import threading
-
+from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 
 from app.config import settings, create_db_and_tables
-
+from app.utils.importToHouseComprehensiveEnvironmentDO import import_HouseComprehensiveEnvironmentDO_from_excel
+from app.utils.importToEnterpriseFatteningEnvironmentDO import import_EnterpriseFatteningEnvironmentDO_from_csv
 app = FastAPI()
 
 
@@ -16,6 +17,30 @@ app = FastAPI()
 @app.on_event("startup")
 async def on_startup():
     create_db_and_tables();
+
+    # 获取配置参数
+    base_data_dir = Path("/app/app/datas")  # Docker容器内的数据目录
+    csv_file_path = base_data_dir / "企业育肥环境数据.csv"
+    excel_file_path = base_data_dir / "envs.xlsx"
+    DB_URL = "postgresql://postgres:password@db:5432/postgres_db_name"
+    shed_id = 9999
+
+    # 创建线程执行数据导入任务
+    def run_data_import():
+        try:
+            print("开始导入企业育肥环境数据...")
+            import_EnterpriseFatteningEnvironmentDO_from_csv(csv_file_path, DB_URL)
+            print("企业育肥环境数据导入完成！")
+
+            print("开始导入综合环境数据...")
+            import_HouseComprehensiveEnvironmentDO_from_excel(excel_file_path, DB_URL, shed_id)
+            print("综合环境数据导入完成！")
+        except Exception as e:
+            print(f"数据导入过程中出现错误: {str(e)}")
+
+    # 在后台线程中运行数据导入，避免阻塞服务器启动
+    import_thread = threading.Thread(target=run_data_import)
+    import_thread.start()
 
 
 # 自动发现并注册路由

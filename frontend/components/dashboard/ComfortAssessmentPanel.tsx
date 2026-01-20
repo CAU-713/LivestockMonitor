@@ -2,7 +2,6 @@
 import React from 'react';
 import { Box, Typography, Paper, Stack, Chip } from '@mui/material';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
-import CloudIcon from '@mui/icons-material/Cloud';
 
 export interface ComfortAssessment {
   status: 'comfort' | 'mild-heat-stress' | 'moderate-heat-stress' | 'severe-heat-stress' | 'cold-stress';
@@ -10,7 +9,6 @@ export interface ComfortAssessment {
   color: string;
   backgroundColor: string;
   description: string;
-  thi?: number; // Temperature Humidity Index
 }
 
 interface ComfortAssessmentPanelProps {
@@ -60,15 +58,7 @@ const ComfortAssessmentPanel: React.FC<ComfortAssessmentPanelProps> = ({ assessm
           />
         </Box>
 
-        {/* THI指数显示 */}
-        {assessment.thi !== undefined && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <CloudIcon sx={{ fontSize: 18, color: assessment.color }} />
-            <Typography variant="body2" sx={{ fontSize: '12px' }}>
-              THI指数: <strong style={{ color: assessment.color }}>{assessment.thi.toFixed(1)}</strong>
-            </Typography>
-          </Box>
-        )}
+        {/* THI 指数已移除 */}
 
         {/* 描述信息 */}
         <Typography

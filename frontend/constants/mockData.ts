@@ -8,6 +8,8 @@ import {
   SensorRecord,
   User,
   AlertRule,
+  StatisticsSummaryData,
+  CorrelationMatrix,
 } from '@/types';
 import { ComfortAssessment } from '@/components/dashboard/ComfortAssessmentPanel';
 
@@ -41,7 +43,6 @@ export const mockComfortAssessments: Record<string, ComfortAssessment> = {
     color: '#4CAF50',
     backgroundColor: '#4CAF50',
     description: '环境条件优良，动物舒适度高，生长性能最佳',
-    thi: 68.5,
   },
   'shed-b': {
     status: 'mild-heat-stress',
@@ -49,7 +50,6 @@ export const mockComfortAssessments: Record<string, ComfortAssessment> = {
     color: '#FF9800',
     backgroundColor: '#FF9800',
     description: '环境温度偏高，动物可能出现轻微应激反应，需关注饮水和通风',
-    thi: 74.2,
   },
 };
 
@@ -73,7 +73,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a1',
     type: 'Temperature',
     status: 'active',
-    lastReading: 22.5,
+    lastReading: 3.0,
   },
   {
     id: 'sensor-a-t2',
@@ -82,7 +82,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a2',
     type: 'Temperature',
     status: 'active',
-    lastReading: 22.8,
+    lastReading: 3.1,
   },
   {
     id: 'sensor-a-h1',
@@ -91,7 +91,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a1',
     type: 'Humidity',
     status: 'active',
-    lastReading: 58,
+    lastReading: 80,
   },
   {
     id: 'sensor-a-nh3',
@@ -136,7 +136,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-a2',
     type: 'WindSpeed',
     status: 'active',
-    lastReading: 0.8,
+    lastReading: 0.2,
   },
   {
     id: 'sensor-a-h2s',
@@ -166,13 +166,22 @@ export const mockSensors: Sensor[] = [
     lastReading: 1200,
   },
   {
+    id: 'sensor-a-radiation',
+    name: 'A区-热辐射传感器',
+    shedId: 'shed-a',
+    penId: 'pen-a1',
+    type: 'Radiation',
+    status: 'active',
+    lastReading: 0.3, // W/m²
+  },
+  {
     id: 'sensor-b-t1',
     name: 'B区-产房温度计',
     shedId: 'shed-b',
     penId: 'pen-b1',
     type: 'Temperature',
     status: 'active',
-    lastReading: 26.1,
+    lastReading: 1.5,
   },
   {
     id: 'sensor-b-h1',
@@ -181,7 +190,7 @@ export const mockSensors: Sensor[] = [
     penId: 'pen-b1',
     type: 'Humidity',
     status: 'inactive',
-    lastReading: 65,
+    lastReading: 70,
   },
   {
     id: 'sensor-b-h2',
@@ -263,6 +272,15 @@ export const mockSensors: Sensor[] = [
     type: 'Light',
     status: 'active',
     lastReading: 1500,
+  },
+  {
+    id: 'sensor-b-radiation',
+    name: 'B区-热辐射传感器',
+    shedId: 'shed-b',
+    penId: 'pen-b1',
+    type: 'Radiation',
+    status: 'active',
+    lastReading: 0.1, // W/m²
   },
 ];
 
@@ -938,4 +956,43 @@ export const welcomeChatResponse: ChatMockResponse = {
       similarity: 0.95,
     },
   ],
+};
+
+// =================================================================
+// Data Analysis Mock Data
+// =================================================================
+
+export const mockStatisticsSummary: StatisticsSummaryData[] = [
+  { variable: 'age', mean: 96.31, variance: 0.22, std: 0.47, min: 96, max: 97, count: 210 },
+  { variable: 'target_temp', mean: 23.17, variance: 0.00, std: 0.05, min: 23.1, max: 23.2, count: 210 },
+  { variable: 'stage', mean: 1, variance: 0, std: 0, min: 1, max: 1, count: 210 },
+  { variable: 'demand', mean: 10100.96, variance: 96.69, std: 9.83, min: 10100, max: 10201, count: 210 },
+  { variable: 'actual', mean: 25200, variance: 0, std: 0, min: 25200, max: 25200, count: 210 },
+  { variable: 'Tem_in', mean: 23.07, variance: 0.16, std: 0.40, min: 22.2, max: 23.7, count: 210 },
+  { variable: 'Tem_out', mean: 0.52, variance: 4.47, std: 2.11, min: -2.2, max: 6.1, count: 210 },
+  { variable: 'RH_in', mean: 51.82, variance: 6.78, std: 2.60, min: 46, max: 60, count: 210 },
+  { variable: 'Tem_1', mean: 22.22, variance: 0.11, std: 0.34, min: 21.4, max: 22.9, count: 210 },
+  { variable: 'Tem_2', mean: 23.61, variance: 0.20, std: 0.45, min: 22.6, max: 24.3, count: 210 },
+  { variable: 'Tem_3', mean: 23.47, variance: 0.26, std: 0.51, min: 22.4, max: 24.6, count: 210 },
+  { variable: 'Tem_4', mean: 0.52, variance: 4.47, std: 2.11, min: -2.2, max: 6.1, count: 210 },
+  { variable: 'Fan_1', mean: 80, variance: 0, std: 0, min: 80, max: 80, count: 210 },
+  { variable: 'Fan_2', mean: 80, variance: 0, std: 0, min: 80, max: 80, count: 210 },
+  { variable: 'Fan_3', mean: 80, variance: 0, std: 0, min: 80, max: 80, count: 210 },
+  { variable: 'Fan_4', mean: 80, variance: 0, std: 0, min: 80, max: 80, count: 210 },
+  { variable: 'Fan_5', mean: 80, variance: 0, std: 0, min: 80, max: 80, count: 210 },
+  { variable: 'roof_window', mean: 25, variance: 0, std: 0, min: 25, max: 25, count: 210 },
+  { variable: 'curtain', mean: 0, variance: 0, std: 0, min: 0, max: 0, count: 210 },
+];
+
+export const mockCorrelationMatrix: CorrelationMatrix = {
+  age: { age: 1, target_temp: -0.99, demand: 0.14, Tem_in: -0.17, Tem_out: -0.42, RH_in: 0.15, Tem_1: -0.19, Tem_2: -0.16, Tem_3: -0.11, Tem_4: -0.42 },
+  target_temp: { age: -0.99, target_temp: 1, demand: -0.15, Tem_in: 0.16, Tem_out: 0.42, RH_in: -0.16, Tem_1: 0.18, Tem_2: 0.16, Tem_3: 0.10, Tem_4: 0.42 },
+  demand: { age: 0.14, target_temp: -0.15, demand: 1, Tem_in: 0.11, Tem_out: 0.09, RH_in: 0.30, Tem_1: 0.05, Tem_2: -0.00, Tem_3: 0.22, Tem_4: 0.09 },
+  Tem_in: { age: -0.17, target_temp: 0.16, demand: 0.11, Tem_in: 1, Tem_out: 0.11, RH_in: -0.02, Tem_1: 0.89, Tem_2: 0.91, Tem_3: 0.93, Tem_4: 0.11 },
+  Tem_out: { age: -0.42, target_temp: 0.42, demand: 0.09, Tem_in: 0.11, Tem_out: 1, RH_in: 0.20, Tem_1: 0.35, Tem_2: -0.06, Tem_3: 0.11, Tem_4: 1 },
+  RH_in: { age: 0.15, target_temp: -0.16, demand: 0.30, Tem_in: -0.02, Tem_out: 0.20, RH_in: 1, Tem_1: 0.10, Tem_2: -0.17, Tem_3: 0.06, Tem_4: 0.20 },
+  Tem_1: { age: -0.19, target_temp: 0.18, demand: 0.05, Tem_in: 0.89, Tem_out: 0.35, RH_in: 0.10, Tem_1: 1, Tem_2: 0.73, Tem_3: 0.78, Tem_4: 0.35 },
+  Tem_2: { age: -0.16, target_temp: 0.16, demand: -0.00, Tem_in: 0.91, Tem_out: -0.06, RH_in: -0.17, Tem_1: 0.73, Tem_2: 1, Tem_3: 0.76, Tem_4: -0.06 },
+  Tem_3: { age: -0.11, target_temp: 0.10, demand: 0.22, Tem_in: 0.93, Tem_out: 0.11, RH_in: 0.06, Tem_1: 0.78, Tem_2: 0.76, Tem_3: 1, Tem_4: 0.11 },
+  Tem_4: { age: -0.42, target_temp: 0.42, demand: 0.09, Tem_in: 0.11, Tem_out: 1, RH_in: 0.20, Tem_1: 0.35, Tem_2: -0.06, Tem_3: 0.11, Tem_4: 1 },
 };

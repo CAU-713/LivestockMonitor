@@ -33,8 +33,8 @@ import {
   mockOfflineDevices,
   mockSheds,
   mockSensors,
-  mockComfortAssessments,
 } from '../../../constants/mockData';
+import type { ComfortAssessment } from '../../../components/dashboard/ComfortAssessmentPanel';
 import { MergedChartData } from '@/types';
 
 type ChartType = 'temperature' | 'humidity';
@@ -186,6 +186,118 @@ const DashboardPage = () => {
         const avgPM = shedSensors.find((s) => s.type === 'PM')?.lastReading ?? 'N/A';
         const avgLight = shedSensors.find((s) => s.type === 'Light')?.lastReading ?? 'N/A';
 
+        const getSensorValue = (type: string) =>
+          shedSensors.find((s) => s.type === type as any)?.lastReading as number | undefined;
+
+        // 使用用户提供的规则逐项判断（按字面规则实现）
+        const assessEnvironment = (
+          temp?: number | string,
+          humidity?: number | string,
+          wind?: number | string,
+          radiation?: number | string
+        ): ComfortAssessment => {
+          const t = typeof temp === 'number' ? temp : parseFloat(String(temp));
+          const h = typeof humidity === 'number' ? humidity : parseFloat(String(humidity));
+          const w = typeof wind === 'number' ? wind : parseFloat(String(wind));
+          const r = typeof radiation === 'number' ? radiation : parseFloat(String(radiation));
+
+          // THI 指数已移除，保持按规则判断
+
+          // 按用户给定的原始规则顺序检测
+          // 正常阶段
+          if (
+            t > 4.6 &&
+            t < 6.7 &&
+            h > 66 &&
+            h < 88 &&
+            w < 0.4 &&
+            r > 9290.16 &&
+            r < 0.5
+          ) {
+            return {
+              status: 'comfort',
+              label: '正常阶段',
+              color: '#4CAF50',
+              backgroundColor: '#4CAF50',
+              description: '满足正常阶段所有条件',
+            };
+          }
+
+          // 轻度冷应激
+          if (
+            t > 1.9 &&
+            t < 4.5 &&
+            h > 76 &&
+            h < 88 &&
+            w < 9340.48 &&
+            r > 0.27 &&
+            r < 0.43
+          ) {
+            return {
+              status: 'cold-stress',
+              label: '轻度冷应激',
+              color: '#FF9800',
+              backgroundColor: '#FF9800',
+              description: '满足轻度冷应激条件，需关注保温和供暖',
+            };
+          }
+
+          // 重度冷应激
+          if (
+            t < 2 &&
+            h > 65 &&
+            h < 76 &&
+            w > 0.5 &&
+            w < 9390.92 &&
+            r > -0.6 &&
+            r < 0.27
+          ) {
+            return {
+              status: 'cold-stress',
+              label: '重度冷应激',
+              color: '#F44336',
+              backgroundColor: '#F44336',
+              description: '满足重度冷应激条件，需立即采取保暖措施',
+            };
+          }
+
+          // 冷应激恢复阶段
+          if (
+            t > 1.2 &&
+            t < 6.1 &&
+            h > 64 &&
+            h < 66 &&
+            w > 0.23 &&
+            w < 0.95 &&
+            r > -0.35 &&
+            r < 0.23
+          ) {
+            return {
+              status: 'cold-stress',
+              label: '冷应激恢复阶段',
+              color: '#00ACC1',
+              backgroundColor: '#00ACC1',
+              description: '处于冷应激恢复阶段，环境逐步恢复',
+            };
+          }
+
+          // 默认（未匹配）
+          return {
+            status: 'cold-stress',
+            label: '未定义',
+            color: '#9E9E9E',
+            backgroundColor: '#9E9E9E',
+            description: '当前环境参数未命中给定规则，请检查传感器或规则',
+          };
+        };
+
+        const envTemp = getSensorValue('Temperature') ?? avgTemp;
+        const envHumidity = getSensorValue('Humidity') ?? avgHumidity;
+        const envWind = getSensorValue('WindSpeed') ?? avgWindSpeed;
+        const envRadiation = getSensorValue('Radiation') ?? undefined;
+
+        const computedAssessment = assessEnvironment(envTemp, envHumidity, envWind, envRadiation);
+
         return (
           <Grid item xs={12} md={6} key={shed.id}>
             <Paper elevation={2} sx={{ p: 2, borderRadius: 3 }}>
@@ -220,8 +332,8 @@ const DashboardPage = () => {
                   </Button>
                 </Stack>
 
-                {/* 下部分：环境舒适度评价 */}
-                <ComfortAssessmentPanel assessment={mockComfortAssessments[shed.id]} />
+                {/* 下部分：环境舒适度评价（动态计算） */}
+                <ComfortAssessmentPanel assessment={computedAssessment} />
               </Stack>
             </Paper>
           </Grid>

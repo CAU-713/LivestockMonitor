@@ -7,10 +7,16 @@ interface KPICardProps {
   title: string;
   value: string | number;
   unit?: string;
-  status?: 'normal' | 'warning' | 'danger';
+  status?: string;
 }
 
-const KPICard: React.FC<KPICardProps> = ({ icon, title, value, unit, status = 'normal' }) => {
+const KPICard: React.FC<KPICardProps> = ({
+  icon,
+  title,
+  value,
+  unit,
+  status = 'normal',
+}) => {
   const theme = useTheme();
 
   const getStatusColor = () => {
@@ -26,7 +32,7 @@ const KPICard: React.FC<KPICardProps> = ({ icon, title, value, unit, status = 'n
 
   return (
     <Paper elevation={3} sx={{ p: 2.5, borderRadius: 3, height: '100%' }}>
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction='row' spacing={2} alignItems='center'>
         <Box
           sx={{
             width: 56,
@@ -42,15 +48,19 @@ const KPICard: React.FC<KPICardProps> = ({ icon, title, value, unit, status = 'n
           {icon}
         </Box>
         <Stack>
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography variant='subtitle2' color='text.secondary'>
             {title}
           </Typography>
-          <Stack direction="row" alignItems="baseline" spacing={0.5}>
-            <Typography variant="h4" fontWeight="bold" sx={{ color: getStatusColor() }}>
+          <Stack direction='row' alignItems='baseline' spacing={0.5}>
+            <Typography
+              variant='h4'
+              fontWeight='bold'
+              sx={{ color: getStatusColor() }}
+            >
               {value}
             </Typography>
             {unit && (
-              <Typography variant="h6" color="text.secondary">
+              <Typography variant='h6' color='text.secondary'>
                 {unit}
               </Typography>
             )}
