@@ -1,9 +1,8 @@
-import pandas as pd
-from sqlalchemy import create_engine, text
-from datetime import datetime
 import numpy as np
-from app.models.RecordDataDO import HouseComprehensiveEnvironmentDO
+import pandas as pd
 from app.models.FacilityDO import ShedDO
+from app.models.RecordDataDO import HouseComprehensiveEnvironmentDO
+from sqlalchemy import create_engine, text
 
 
 def map_excel_to_model(row_data):

@@ -47,7 +47,6 @@ engine = create_engine(settings.database_url, echo=True)
 
 def create_db_and_tables():
     # 导入models包会自动加载所有模型
-    import app.models
     SQLModel.metadata.create_all(engine)
 
 

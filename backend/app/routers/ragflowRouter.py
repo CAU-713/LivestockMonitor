@@ -2,14 +2,13 @@
 RAGFlow 聊天路由
 提供 RAGFlow 相关的 API 接口
 """
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-
 from app.schemas.ragflowDTO import (
     ChatRequest, ChatResponse, SessionCreate, SessionResponse,
     DatasetCreate, DatasetResponse, DocumentUpload
 )
 from app.services.ragflow import RAGFlowService
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/ragflow", tags=["RAGFlow Chat"])
 

@@ -1,11 +1,13 @@
 # 自动导入所有模型
-from .DeviceDO import SensorDO, CameraDO, SensorTypeDO
-from .FacilityDO import ShedDO, PenDO
-from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, HouseComprehensiveEnvironmentDO, EnterpriseFatteningEnvironmentDO
-from .UserDO import UserDO
 from .AlertDO import AlertDO
 from .AnimalDO import AnimalDO
-from .HealthDataDO import WeightRecordDO, FeedIntakeRecordDO, BodyTemperatureRecordDO, RespirationRecordDO, SerumRecordDO
+from .DeviceDO import SensorDO, CameraDO, SensorTypeDO
+from .FacilityDO import ShedDO, PenDO
+from .HealthDataDO import WeightRecordDO, FeedIntakeRecordDO, BodyTemperatureRecordDO, RespirationRecordDO, \
+    SerumRecordDO
+from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, HouseComprehensiveEnvironmentDO, \
+    EnterpriseFatteningEnvironmentDO
+from .UserDO import UserDO
 
 # 添加新模型时在这里导入
 # from .product import ProductDO

@@ -1,6 +1,8 @@
+import time
+
 import cv2
 from ultralytics import YOLO
-import time
+
 
 class YoloStream:
     def __init__(self, model_path: str, video_path: str, imgsz: int = 640):

@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Optional, Dict, Any
-from datetime import datetime, date, time
+
 from sqlalchemy.dialects.postgresql import JSON
 from sqlmodel import Field, SQLModel, Relationship
 

@@ -1,7 +1,8 @@
-from typing import Optional, Dict, Any
-from datetime import datetime, date, time
+from typing import Optional
+
 from sqlalchemy.dialects.postgresql import JSON
 from sqlmodel import Field, SQLModel, Relationship
+
 
 class ShedDO(SQLModel, table=True):
     """羊舍信息数据对象"""

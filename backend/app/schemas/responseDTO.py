@@ -3,9 +3,10 @@
 定义所有 API 接口的统一返回格式
 """
 
-from typing import Optional, Any, Generic, TypeVar
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Optional, Generic, TypeVar
+
+from pydantic import BaseModel, Field
 
 # 泛型类型变量
 T = TypeVar('T')
