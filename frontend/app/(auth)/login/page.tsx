@@ -71,6 +71,15 @@ const LoginPage = () => {
           >
             访客模式
           </Button>
+          <Button
+            component={Link}
+            href="/dashboard" 
+            fullWidth
+            variant="outlined"
+            sx={{ mt: 0, mb: 2 }} 
+          >
+            科研模式
+          </Button>
         </Box>
       </Paper>
     </Container>
