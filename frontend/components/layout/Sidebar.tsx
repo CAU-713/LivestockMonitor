@@ -110,22 +110,22 @@ const Sidebar = () => {
             <ListItemButton
               sx={{ pl: 4 }}
               component={Link}
-              href="/history/data-analysis" // Link to the new page
-            >
-              <ListItemIcon>
-                <QueryStatsIcon />
-              </ListItemIcon>
-              <ListItemText primary="数据分析" />
-            </ListItemButton>
-            <ListItemButton
-              sx={{ pl: 4 }}
-              component={Link}
               href="/history/video-data"
             >
               <ListItemIcon>
                 <VideocamIcon />
               </ListItemIcon>
               <ListItemText primary="视频数据" />
+            </ListItemButton>
+            <ListItemButton
+              sx={{ pl: 4 }}
+              component={Link}
+              href="/history/data-analysis" // Link to the new page
+            >
+              <ListItemIcon>
+                <QueryStatsIcon />
+              </ListItemIcon>
+              <ListItemText primary="数据分析" />
             </ListItemButton>
           </List>
         </Collapse>
