@@ -1,317 +1,564 @@
 """
-RAGFlow 服务
-实现 RAGFlow 的业务逻辑
+RAGFlow Service Layer
+业务逻辑层，封装所有与RAGFlow API的交互
 """
-import json
-import os
-from typing import Dict, Any, Optional, List
 
-from dotenv import load_dotenv
-from ragflow_sdk import RAGFlow
+import requests
+from typing import Optional, List, Dict, Any, Union
+from pathlib import Path
+import logging
 
-# 加载环境变量
-load_dotenv()
+logger = logging.getLogger(__name__)
+
+
+class RAGFlowServiceError(Exception):
+    """RAGFlow服务异常"""
+    pass
 
 
 class RAGFlowService:
-    """RAGFlow 服务类，封装所有与 RAGFlow 相关的业务逻辑"""
+    """RAGFlow服务类，处理所有与RAGFlow API的交互"""
 
-    def __init__(self):
-        """初始化 RAGFlow 客户端"""
-        self.api_key = os.getenv("RAGFLOW_API_KEY")
-        self.base_url = os.getenv("RAGFLOW_BASE_URL")
-        self.rag_client = RAGFlow(api_key=self.api_key, base_url=self.base_url)
-
-        # 会话缓存（生产环境建议使用 Redis）
-        self.sessions_cache: Dict[str, Any] = {}
-
-    @staticmethod
-    def safe_get_attr(obj, attr: str, default=''):
+    def __init__(self, base_url: str, api_key: str):
         """
-        安全获取对象属性或字典键值
+        初始化RAGFlow服务
 
         Args:
-            obj: 对象或字典
-            attr: 属性名或键名
-            default: 默认值
-
-        Returns:
-            属性值或默认值
+            base_url: RAGFlow API基础URL
+            api_key: API密钥
         """
-        if isinstance(obj, dict):
-            return obj.get(attr, default)
-        return getattr(obj, attr, default)
+        self.base_url = base_url.rstrip('/')
+        self.api_key = api_key
+        self.headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        logger.info(f"RAGFlow服务初始化完成: {base_url}")
 
-    def extract_references(self, references_data) -> Optional[List[Dict[str, Any]]]:
+    def _handle_response(self, response: requests.Response) -> Dict[str, Any]:
         """
-        提取并格式化引用信息
+        统一处理API响应
 
         Args:
-            references_data: 原始引用数据
+            response: requests响应对象
 
         Returns:
-            格式化后的引用列表
-        """
-        if not references_data:
-            return None
-
-        references = []
-        for ref in references_data:
-            references.append({
-                "content": self.safe_get_attr(ref, 'content', ''),
-                "document_name": self.safe_get_attr(ref, 'document_name', '未知文档'),
-                "document_id": self.safe_get_attr(ref, 'document_id', ''),
-                "similarity": self.safe_get_attr(ref, 'similarity', 0),
-                "dataset_id": self.safe_get_attr(ref, 'dataset_id', '')
-            })
-        return references if references else None
-
-    def list_chats(self) -> List[Dict[str, Any]]:
-        """
-        列出所有聊天助手
-
-        Returns:
-            聊天助手列表
-        """
-        chats = self.rag_client.list_chats()
-        return [
-            {
-                "id": chat.id,
-                "name": chat.name,
-                "description": getattr(chat, 'description', ''),
-            }
-            for chat in chats
-        ]
-
-    def create_session(self, chat_id: str, session_name: str = "New Session") -> Dict[str, str]:
-        """
-        创建新会话
-
-        Args:
-            chat_id: 聊天助手 ID
-            session_name: 会话名称
-
-        Returns:
-            会话信息
+            解析后的JSON数据
 
         Raises:
-            ValueError: 当找不到聊天助手时
-        """
-        chats = self.rag_client.list_chats(id=chat_id)
-        if not chats:
-            raise ValueError("Chat assistant not found")
-
-        chat = chats[0]
-        session = chat.create_session(name=session_name)
-
-        # 缓存会话对象
-        self.sessions_cache[session.id] = session
-
-        return {
-            "session_id": session.id,
-            "session_name": session.name,
-            "chat_id": chat_id
-        }
-
-    def chat(self, question: str, chat_id: str, session_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        非流式聊天
-
-        Args:
-            question: 用户问题
-            chat_id: 聊天助手 ID
-            session_id: 会话 ID（可选）
-
-        Returns:
-            聊天响应数据
-
-        Raises:
-            ValueError: 当找不到聊天助手时
-        """
-        # 获取或创建会话
-        if session_id and session_id in self.sessions_cache:
-            session = self.sessions_cache[session_id]
-        else:
-            chats = self.rag_client.list_chats(id=chat_id)
-            if not chats:
-                raise ValueError("Chat assistant not found")
-
-            chat = chats[0]
-            session = chat.create_session()
-            self.sessions_cache[session.id] = session
-
-        # 调用 RAGFlow 进行对话
-        response = session.ask(question=question, stream=False)
-
-        # 提取内容和引用
-        content = self.safe_get_attr(response, 'content', '')
-        references = self.extract_references(
-            self.safe_get_attr(response, 'reference', None)
-        )
-
-        return {
-            "answer": content,
-            "session_id": session.id,
-            "references": references
-        }
-
-    async def chat_stream(self, question: str, chat_id: str, session_id: Optional[str] = None):
-        """
-        流式聊天生成器
-
-        Args:
-            question: 用户问题
-            chat_id: 聊天助手 ID
-            session_id: 会话 ID（可选）
-
-        Yields:
-            Server-Sent Events 格式的数据块
+            RAGFlowServiceError: API调用失败时抛出
         """
         try:
-            # 获取或创建会话
-            if session_id and session_id in self.sessions_cache:
-                session = self.sessions_cache[session_id]
-            else:
-                chats = self.rag_client.list_chats(id=chat_id)
-                if not chats:
-                    yield f"data: {json.dumps({'error': 'Chat assistant not found'})}\n\n"
-                    return
-
-                chat = chats[0]
-                session = chat.create_session()
-                self.sessions_cache[session.id] = session
-
-            # 流式对话
-            full_content = ""
-            references = None
-
-            for chunk in session.ask(question=question, stream=True):
-                content = self.safe_get_attr(chunk, 'content', '')
-
-                # 提取新增内容
-                new_content = content[len(full_content):]
-                full_content = content
-
-                # 提取引用信息
-                chunk_references = self.safe_get_attr(chunk, 'reference', None)
-                if chunk_references:
-                    references = self.extract_references(chunk_references)
-
-                # 发送数据块
-                data = {
-                    "content": new_content,
-                    "session_id": session.id,
-                    "references": references
-                }
-                yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-            # 发送结束标记
-            yield f"data: {json.dumps({'done': True})}\n\n"
-
+            data = response.json()
         except Exception as e:
-            import traceback
-            error_detail = traceback.format_exc()
-            print(f"Stream error: {error_detail}")
-            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            logger.error(f"解析响应JSON失败: {e}")
+            raise RAGFlowServiceError(f"解析响应失败: {str(e)}")
 
-    def list_datasets(self) -> List[Dict[str, Any]]:
-        """
-        列出所有数据集
+        # 检查业务状态码
+        if data.get("code") != 0:
+            error_msg = data.get("message", "未知错误")
+            logger.error(f"API调用失败: code={data.get('code')}, message={error_msg}")
+            raise RAGFlowServiceError(error_msg)
 
-        Returns:
-            数据集列表
-        """
-        datasets = self.rag_client.list_datasets()
-        return [
-            {
-                "id": ds.id,
-                "name": ds.name,
-                "chunk_count": ds.chunk_count,
-                "document_count": ds.document_count
-            }
-            for ds in datasets
-        ]
+        return data
 
     def create_dataset(
             self,
             name: str,
+            avatar: Optional[str] = None,
             description: Optional[str] = None,
-            chunk_method: str = "naive"
-    ) -> Dict[str, str]:
+            embedding_model: Optional[str] = None,
+            permission: str = "me",
+            chunk_method: Optional[str] = None,
+            parser_config: Optional[Dict[str, Any]] = None,
+            parse_type: Optional[int] = None,
+            pipeline_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        创建数据集
+        创建知识库
 
         Args:
-            name: 数据集名称
-            description: 数据集描述
+            name: 知识库名称
+            avatar: Base64编码的头像
+            description: 知识库描述
+            embedding_model: 嵌入模型名称
+            permission: 访问权限 ("me" 或 "team")
             chunk_method: 分块方法
+            parser_config: 解析器配置
+            parse_type: 管道解析类型
+            pipeline_id: 摄取管道ID
 
         Returns:
-            数据集信息
-        """
-        dataset = self.rag_client.create_dataset(
-            name=name,
-            description=description,
-            chunk_method=chunk_method
-        )
+            包含知识库信息的字典
 
-        return {
-            "id": dataset.id,
-            "name": dataset.name
+        Raises:
+            RAGFlowServiceError: 创建失败时抛出
+        """
+        logger.info(f"开始创建知识库: {name}")
+
+        url = f"{self.base_url}/api/v1/datasets"
+        payload = {"name": name}
+
+        if avatar:
+            payload["avatar"] = avatar
+        if description:
+            payload["description"] = description
+        if embedding_model:
+            payload["embedding_model"] = embedding_model
+        if permission:
+            payload["permission"] = permission
+
+        # 参数互斥性检查
+        if chunk_method and (parse_type is not None or pipeline_id is not None):
+            raise RAGFlowServiceError(
+                "chunk_method 与 parse_type/pipeline_id 互斥"
+            )
+
+        if chunk_method:
+            payload["chunk_method"] = chunk_method
+            if parser_config:
+                payload["parser_config"] = parser_config
+        elif parse_type is not None and pipeline_id is not None:
+            payload["parse_type"] = parse_type
+            payload["pipeline_id"] = pipeline_id
+        elif parse_type is not None or pipeline_id is not None:
+            raise RAGFlowServiceError(
+                "parse_type 和 pipeline_id 必须同时指定"
+            )
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info(f"知识库创建成功: {result['data']['id']}")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"创建知识库网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def upload_documents(
+            self,
+            dataset_id: str,
+            file_paths: Union[str, List[str]]
+    ) -> Dict[str, Any]:
+        """
+        上传文档到知识库
+
+        Args:
+            dataset_id: 知识库ID
+            file_paths: 文件路径（单个或列表）
+
+        Returns:
+            包含上传结果的字典
+
+        Raises:
+            RAGFlowServiceError: 上传失败时抛出
+        """
+        logger.info(f"开始上传文档到知识库: {dataset_id}")
+
+        url = f"{self.base_url}/api/v1/datasets/{dataset_id}/documents"
+
+        # 统一处理为列表
+        if isinstance(file_paths, str):
+            file_paths = [file_paths]
+
+        # 准备文件
+        files = []
+        file_handles = []
+
+        try:
+            for file_path in file_paths:
+                path = Path(file_path)
+                if not path.exists():
+                    raise RAGFlowServiceError(f"文件不存在: {file_path}")
+
+                file_handle = open(file_path, 'rb')
+                file_handles.append(file_handle)
+                files.append(
+                    ('file', (path.name, file_handle, 'application/octet-stream'))
+                )
+
+            headers = {'Authorization': f'Bearer {self.api_key}'}
+            response = requests.post(url, headers=headers, files=files)
+            result = self._handle_response(response)
+
+            logger.info(f"文档上传成功，共 {len(result['data'])} 个文件")
+            return result
+
+        except requests.RequestException as e:
+            logger.error(f"上传文档网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+        finally:
+            # 确保关闭所有文件句柄
+            for fh in file_handles:
+                fh.close()
+
+    def parse_documents(
+            self,
+            dataset_id: str,
+            document_ids: List[str]
+    ) -> Dict[str, Any]:
+        """
+        解析文档
+
+        Args:
+            dataset_id: 知识库ID
+            document_ids: 文档ID列表
+
+        Returns:
+            包含解析结果的字典
+
+        Raises:
+            RAGFlowServiceError: 解析失败时抛出
+        """
+        logger.info(f"开始解析文档: 知识库={dataset_id}, 文档数={len(document_ids)}")
+
+        url = f"{self.base_url}/api/v1/datasets/{dataset_id}/chunks"
+        payload = {"document_ids": document_ids}
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info("文档解析请求已提交")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"解析文档网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def delete_documents(
+            self,
+            dataset_id: str,
+            document_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        删除文档
+
+        Args:
+            dataset_id: 知识库ID
+            document_ids: 文档ID列表（None表示删除所有）
+
+        Returns:
+            包含删除结果的字典
+
+        Raises:
+            RAGFlowServiceError: 删除失败时抛出
+        """
+        logger.info(f"开始删除文档: 知识库={dataset_id}")
+
+        url = f"{self.base_url}/api/v1/datasets/{dataset_id}/documents"
+        payload = {}
+
+        if document_ids is not None:
+            payload["ids"] = document_ids
+            logger.info(f"删除指定文档: {len(document_ids)} 个")
+        else:
+            logger.warning("删除知识库中所有文档")
+
+        try:
+            response = requests.delete(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info("文档删除成功")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"删除文档网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def create_chat_assistant(
+            self,
+            name: str,
+            dataset_ids: Optional[List[str]] = None,
+            avatar: Optional[str] = None,
+            llm: Optional[Dict[str, Any]] = None,
+            prompt: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        创建聊天助手
+
+        Args:
+            name: 助手名称
+            dataset_ids: 关联的知识库ID列表
+            avatar: Base64编码的头像
+            llm: LLM配置
+            prompt: 提示配置
+
+        Returns:
+            包含助手信息的字典
+
+        Raises:
+            RAGFlowServiceError: 创建失败时抛出
+        """
+        logger.info(f"开始创建聊天助手: {name}")
+
+        url = f"{self.base_url}/api/v1/chats"
+        payload = {"name": name}
+
+        if dataset_ids is not None:
+            payload["dataset_ids"] = dataset_ids
+            logger.info(f"关联知识库数量: {len(dataset_ids)}")
+        if avatar:
+            payload["avatar"] = avatar
+        if llm:
+            payload["llm"] = llm
+        if prompt:
+            payload["prompt"] = prompt
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info(f"聊天助手创建成功: {result['data']['id']}")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"创建聊天助手网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def create_session(
+            self,
+            chat_id: str,
+            name: Optional[str] = None,
+            user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        创建聊天会话
+
+        Args:
+            chat_id: 聊天助手ID
+            name: 会话名称
+            user_id: 用户自定义ID
+
+        Returns:
+            包含会话信息的字典
+
+        Raises:
+            RAGFlowServiceError: 创建失败时抛出
+        """
+        logger.info(f"开始创建会话: 助手={chat_id}, 名称={name}")
+
+        url = f"{self.base_url}/api/v1/chats/{chat_id}/sessions"
+        payload = {}
+
+        if name:
+            payload["name"] = name
+        if user_id:
+            payload["user_id"] = user_id
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info(f"会话创建成功: {result['data']['id']}")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"创建会话网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    # def get_dataset_info(self, dataset_id: str) -> Dict[str, Any]:
+    #     """
+    #     获取知识库信息（扩展功能）
+    #
+    #     Args:
+    #         dataset_id: 知识库ID
+    #
+    #     Returns:
+    #         知识库信息
+    #     """
+    #     logger.info(f"获取知识库信息: {dataset_id}")
+    #     url = f"{self.base_url}/api/v1/datasets/{dataset_id}"
+    #
+    #     try:
+    #         response = requests.get(url, headers=self.headers)
+    #         return self._handle_response(response)
+    #     except requests.RequestException as e:
+    #         logger.error(f"获取知识库信息失败: {e}")
+    #         raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def list_datasets(self, page: int = 1, page_size: int = 10) -> Dict[str, Any]:
+        """
+        列出所有知识库（扩展功能）
+
+        Args:
+            page: 页码
+            page_size: 每页数量
+
+        Returns:
+            知识库列表
+        """
+        logger.info(f"列出知识库: page={page}, page_size={page_size}")
+        url = f"{self.base_url}/api/v1/datasets"
+        params = {"page": page, "page_size": page_size}
+
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            return self._handle_response(response)
+        except requests.RequestException as e:
+            logger.error(f"列出知识库失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def get_document_status(
+            self,
+            document_id: str,
+            dataset_id: str
+    ) -> Optional[str]:
+        """
+        查询文档解析状态
+
+        Args:
+            document_id: 文档ID
+            dataset_id: 知识库ID
+
+        Returns:
+            文档状态字符串，可能的值：
+            - "UNSTART": 未开始
+            - "RUNNING": 解析中
+            - "CANCEL": 已取消
+            - "DONE": 解析完成
+            - "FAIL": 解析失败
+            - None: 未找到文档或查询失败
+
+        Raises:
+            RAGFlowServiceError: 查询失败时抛出
+        """
+        logger.info(f"查询文档状态: 知识库={dataset_id}, 文档={document_id}")
+
+        url = f"{self.base_url}/api/v1/datasets/{dataset_id}/documents"
+        params = {
+            "id": document_id,
+            "page": 1,
+            "page_size": 1,
+            "run": ["UNSTART", "RUNNING", "CANCEL", "DONE", "FAIL"]
         }
 
-    def list_documents(self, dataset_id: str) -> List[Dict[str, Any]]:
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            result = self._handle_response(response)
+
+            # 获取文档列表
+            docs = result.get("data", {}).get("docs", [])
+
+            if not docs:
+                logger.warning(f"未找到文档: document_id={document_id}")
+                return None
+
+            # 返回文档的解析状态
+            status = docs[0].get("run")
+            logger.info(f"文档状态: {status}")
+            return status
+
+        except requests.RequestException as e:
+            logger.error(f"查询文档状态网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def get_documents_list(
+            self,
+            dataset_id: str,
+            page: int = 1,
+            page_size: int = 10,
+            status_filter: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
-        列出数据集中的文档
+        获取知识库中的文档列表
 
         Args:
-            dataset_id: 数据集 ID
+            dataset_id: 知识库ID
+            page: 页码
+            page_size: 每页数量
+            status_filter: 状态过滤，可选值: UNSTART, RUNNING, CANCEL, DONE, FAIL
 
         Returns:
-            文档列表
-
-        Raises:
-            ValueError: 当找不到数据集时
+            包含文档列表的字典
         """
-        datasets = self.rag_client.list_datasets(id=dataset_id)
-        if not datasets:
-            raise ValueError("Dataset not found")
+        logger.info(f"获取文档列表: 知识库={dataset_id}, page={page}")
 
-        dataset = datasets[0]
-        documents = dataset.list_documents()
+        url = f"{self.base_url}/api/v1/datasets/{dataset_id}/documents"
+        params = {
+            "page": page,
+            "page_size": page_size
+        }
 
-        return [
-            {
-                "id": doc.id,
-                "name": doc.name,
-                "chunk_count": doc.chunk_count,
-                "status": doc.run
-            }
-            for doc in documents
-        ]
+        if status_filter:
+            params["run"] = status_filter
 
-    def upload_document(self, dataset_id: str, display_name: str, content: str):
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            result = self._handle_response(response)
+            logger.info(f"获取到 {len(result.get('data', {}).get('docs', []))} 个文档")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"获取文档列表失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def check_dataset_ready(
+            self,
+            dataset_id: str
+    ) -> Dict[str, Any]:
         """
-        上传文档到数据集
+        检查知识库是否已准备好（所有文档都已解析完成）
 
         Args:
-            dataset_id: 数据集 ID
-            display_name: 文档显示名称
-            content: 文档内容
+            dataset_id: 知识库ID
 
-        Raises:
-            ValueError: 当找不到数据集时
-        """
-        datasets = self.rag_client.list_datasets(id=dataset_id)
-        if not datasets:
-            raise ValueError("Dataset not found")
-
-        dataset = datasets[0]
-
-        # 上传文档
-        dataset.upload_documents([
+        Returns:
+            包含就绪状态的字典:
             {
-                "display_name": display_name,
-                "blob": content.encode() if isinstance(content, str) else content
+                "ready": bool,  # 是否已就绪
+                "total": int,   # 总文档数
+                "done": int,    # 已完成数
+                "running": int, # 解析中数
+                "failed": int,  # 失败数
+                "documents": list  # 文档状态详情
             }
-        ])
+        """
+        logger.info(f"检查知识库就绪状态: {dataset_id}")
+
+        try:
+            # 获取所有文档
+            result = self.get_documents_list(
+                dataset_id=dataset_id,
+                page=1,
+                page_size=1000  # 获取所有文档
+            )
+
+            docs = result.get("data", {}).get("docs", [])
+            total = len(docs)
+
+            # 统计各状态文档数量
+            status_count = {
+                "DONE": 0,
+                "RUNNING": 0,
+                "FAIL": 0,
+                "UNSTART": 0,
+                "CANCEL": 0
+            }
+
+            documents_status = []
+            for doc in docs:
+                status = doc.get("run", "UNKNOWN")
+                status_count[status] = status_count.get(status, 0) + 1
+                documents_status.append({
+                    "id": doc.get("id"),
+                    "name": doc.get("name"),
+                    "status": status
+                })
+
+            # 判断是否就绪：所有文档都是DONE状态
+            ready = total > 0 and status_count["DONE"] == total
+
+            result_info = {
+                "ready": ready,
+                "total": total,
+                "done": status_count["DONE"],
+                "running": status_count["RUNNING"],
+                "failed": status_count["FAIL"],
+                "unstart": status_count["UNSTART"],
+                "cancel": status_count["CANCEL"],
+                "documents": documents_status
+            }
+
+            logger.info(
+                f"知识库状态: ready={ready}, "
+                f"total={total}, done={status_count['DONE']}, "
+                f"running={status_count['RUNNING']}, failed={status_count['FAIL']}"
+            )
+
+            return result_info
+
+        except Exception as e:
+            logger.error(f"检查知识库就绪状态失败: {e}")
+            raise RAGFlowServiceError(f"检查就绪状态失败: {str(e)}")
