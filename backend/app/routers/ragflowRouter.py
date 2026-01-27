@@ -1,194 +1,579 @@
 """
-RAGFlow 聊天路由
-提供 RAGFlow 相关的 API 接口
+RAGFlow Router Layer
+路由层，定义所有API端点
 """
+
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, status
+from fastapi.responses import JSONResponse
+from typing import List, Optional
+import logging
+import tempfile
+import os
+
 from app.schemas.ragflowDTO import (
-    ChatRequest, ChatResponse, SessionCreate, SessionResponse,
-    DatasetCreate, DatasetResponse, DocumentUpload
+    CreateDatasetRequest, CreateDatasetResponse,
+    ParseDocumentsRequest, ParseDocumentsResponse,
+    DeleteDocumentsRequest, DeleteDocumentsResponse,
+    CreateChatAssistantRequest, CreateChatAssistantResponse,
+    CreateSessionRequest, CreateSessionResponse,
+    UploadDocumentsResponse, ErrorResponse,
+    DocumentStatusResponse, DatasetReadinessResponse, DocumentsListResponse
 )
-from app.services.ragflow import RAGFlowService
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from app.services.ragflow import RAGFlowService, RAGFlowServiceError
 
-router = APIRouter(prefix="/ragflow", tags=["RAGFlow Chat"])
+logger = logging.getLogger(__name__)
 
-# 初始化 RAGFlow 服务
-ragflow_service = RAGFlowService()
+# 创建路由器
+router = APIRouter(
+    prefix="/api/ragflow",
+    tags=["RAGFlow"],
+    responses={
+        500: {"model": ErrorResponse, "description": "服务器内部错误"},
+        400: {"model": ErrorResponse, "description": "请求参数错误"},
+    }
+)
 
 
-@router.get("/chats")
-async def list_chats():
+# 依赖注入：获取RAGFlow服务实例
+def get_ragflow_service() -> RAGFlowService:
     """
-    列出所有聊天助手
-
-    Returns:
-        包含所有聊天助手信息的列表
+    获取RAGFlow服务实例
+    在实际应用中，应该从配置文件或环境变量中读取
     """
-    try:
-        chats = ragflow_service.list_chats()
-        return {
-            "success": True,
-            "data": chats
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # 从配置中读取
+    base_url = os.getenv("RAGFLOW_BASE_URL")
+    api_key = os.getenv("RAGFLOW_API_KEY")
+
+    return RAGFlowService(base_url=base_url, api_key=api_key)
 
 
-@router.post("/sessions", response_model=SessionResponse)
-async def create_session(request: SessionCreate):
+@router.post(
+    "/datasets",
+    response_model=CreateDatasetResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="创建知识库",
+    description="创建一个新的知识库（数据集）"
+)
+async def create_dataset(
+        request: CreateDatasetRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
     """
-    创建新会话
+    创建知识库
 
-    Args:
-        request: 包含 chat_id 和可选 session_name 的请求
-
-    Returns:
-        新创建的会话信息
-    """
-    try:
-        session_data = ragflow_service.create_session(
-            chat_id=request.chat_id,
-            session_name=request.session_name
-        )
-        return SessionResponse(success=True, data=session_data)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """
-    非流式聊天接口
-
-    Args:
-        request: 包含问题、会话 ID、聊天助手 ID 的请求
-
-    Returns:
-        聊天响应，包含答案和引用信息
+    - **name**: 知识库名称（必填）
+    - **description**: 知识库描述
+    - **chunk_method**: 分块方法（naive, book, email等）
+    - **parser_config**: 解析器配置
     """
     try:
-        response_data = ragflow_service.chat(
-            question=request.question,
-            chat_id=request.chat_id,
-            session_id=request.session_id
-        )
-        return ChatResponse(success=True, data=response_data)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.info(f"接收到创建知识库请求: {request.name}")
 
-
-@router.post("/chat/stream")
-async def chat_stream(request: ChatRequest):
-    """
-    流式聊天接口
-
-    Args:
-        request: 包含问题、会话 ID、聊天助手 ID 的请求
-
-    Returns:
-        Server-Sent Events 流式响应
-    """
-    try:
-        generator = ragflow_service.chat_stream(
-            question=request.question,
-            chat_id=request.chat_id,
-            session_id=request.session_id
-        )
-        return StreamingResponse(generator, media_type="text/event-stream")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/datasets")
-async def list_datasets():
-    """
-    列出所有数据集
-
-    Returns:
-        所有数据集的列表
-    """
-    try:
-        datasets = ragflow_service.list_datasets()
-        return {
-            "success": True,
-            "data": datasets
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/datasets", response_model=DatasetResponse)
-async def create_dataset(request: DatasetCreate):
-    """
-    创建新数据集
-
-    Args:
-        request: 包含数据集名称、描述和分块方法的请求
-
-    Returns:
-        新创建的数据集信息
-    """
-    try:
-        dataset_data = ragflow_service.create_dataset(
+        result = service.create_dataset(
             name=request.name,
+            avatar=request.avatar,
             description=request.description,
-            chunk_method=request.chunk_method
+            embedding_model=request.embedding_model,
+            permission=request.permission.value if request.permission else "me",
+            chunk_method=request.chunk_method.value if request.chunk_method else None,
+            parser_config=request.parser_config,
+            parse_type=request.parse_type,
+            pipeline_id=request.pipeline_id
         )
-        return DatasetResponse(success=True, data=dataset_data)
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"创建知识库失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("创建知识库时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
 
 
-@router.get("/datasets/{dataset_id}/documents")
-async def list_documents(dataset_id: str):
+@router.post(
+    "/datasets/{dataset_id}/documents",
+    response_model=UploadDocumentsResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="上传文档",
+    description="上传一个或多个文档到指定知识库"
+)
+async def upload_documents(
+        dataset_id: str,
+        files: List[UploadFile] = File(..., description="要上传的文件列表"),
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
     """
-    列出数据集中的文档
+    上传文档到知识库
 
-    Args:
-        dataset_id: 数据集 ID
-
-    Returns:
-        数据集中所有文档的列表
+    - **dataset_id**: 知识库ID（路径参数）
+    - **files**: 要上传的文件列表
     """
+    temp_files = []
+
     try:
-        documents = ragflow_service.list_documents(dataset_id)
-        return {
-            "success": True,
-            "data": documents
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.info(f"接收到上传文档请求: 知识库={dataset_id}, 文件数={len(files)}")
 
+        # 保存上传的文件到临时目录
+        file_paths = []
+        for upload_file in files:
+            # 创建临时文件
+            suffix = os.path.splitext(upload_file.filename)[1]
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+            temp_files.append(temp_file.name)
 
-@router.post("/datasets/{dataset_id}/documents")
-async def upload_document(dataset_id: str, request: DocumentUpload):
-    """
-    上传文档到数据集
+            # 写入内容
+            content = await upload_file.read()
+            temp_file.write(content)
+            temp_file.close()
 
-    Args:
-        dataset_id: 数据集 ID
-        request: 包含文档名称和内容的请求
+            file_paths.append(temp_file.name)
+            logger.debug(f"文件已保存到临时路径: {temp_file.name}")
 
-    Returns:
-        上传成功的消息
-    """
-    try:
-        ragflow_service.upload_document(
+        # 调用服务层上传
+        result = service.upload_documents(
             dataset_id=dataset_id,
-            display_name=request.display_name,
-            content=request.content
+            file_paths=file_paths
         )
-        return {
-            "success": True,
-            "message": "Document uploaded successfully"
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"上传文档失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("上传文档时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+    finally:
+        # 清理临时文件
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+                    logger.debug(f"临时文件已删除: {temp_file}")
+            except Exception as e:
+                logger.warning(f"删除临时文件失败: {temp_file}, 错误: {e}")
+
+
+@router.post(
+    "/datasets/{dataset_id}/parse",
+    response_model=ParseDocumentsResponse,
+    summary="解析文档",
+    description="解析知识库中的指定文档"
+)
+async def parse_documents(
+        dataset_id: str,
+        request: ParseDocumentsRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    解析文档
+
+    - **dataset_id**: 知识库ID（路径参数）
+    - **document_ids**: 要解析的文档ID列表
+    """
+    try:
+        logger.info(f"接收到解析文档请求: 知识库={dataset_id}, 文档数={len(request.document_ids)}")
+
+        result = service.parse_documents(
+            dataset_id=dataset_id,
+            document_ids=request.document_ids
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"解析文档失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("解析文档时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.delete(
+    "/datasets/{dataset_id}/documents",
+    response_model=DeleteDocumentsResponse,
+    summary="删除文档",
+    description="删除知识库中的指定文档或所有文档"
+)
+async def delete_documents(
+        dataset_id: str,
+        request: Optional[DeleteDocumentsRequest] = None,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    删除文档
+
+    - **dataset_id**: 知识库ID（路径参数）
+    - **ids**: 要删除的文档ID列表（可选，为空则删除所有文档）
+    """
+    try:
+        document_ids = request.ids if request else None
+        logger.info(f"接收到删除文档请求: 知识库={dataset_id}, 文档ID={document_ids}")
+
+        result = service.delete_documents(
+            dataset_id=dataset_id,
+            document_ids=document_ids
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"删除文档失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("删除文档时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.post(
+    "/chat-assistants",
+    response_model=CreateChatAssistantResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="创建聊天助手",
+    description="创建一个新的聊天助手"
+)
+async def create_chat_assistant(
+        request: CreateChatAssistantRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    创建聊天助手
+
+    - **name**: 助手名称（必填）
+    - **dataset_ids**: 关联的知识库ID列表
+    - **llm**: LLM配置（模型、温度等参数）
+    - **prompt**: 提示配置（相似度阈值、开场白等）
+    """
+    try:
+        logger.info(f"接收到创建聊天助手请求: {request.name}")
+
+        # 转换LLM配置
+        llm_config = None
+        if request.llm:
+            llm_config = request.llm.dict(exclude_none=True)
+
+        # 转换Prompt配置
+        prompt_config = None
+        if request.prompt:
+            prompt_config = request.prompt.dict(exclude_none=True)
+
+        result = service.create_chat_assistant(
+            name=request.name,
+            dataset_ids=request.dataset_ids,
+            avatar=request.avatar,
+            llm=llm_config,
+            prompt=prompt_config
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"创建聊天助手失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("创建聊天助手时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.post(
+    "/chat-assistants/{chat_id}/sessions",
+    response_model=CreateSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="创建会话",
+    description="为指定的聊天助手创建一个新的会话"
+)
+async def create_session(
+        chat_id: str,
+        request: CreateSessionRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    创建会话
+
+    - **chat_id**: 聊天助手ID（路径参数）
+    - **name**: 会话名称
+    - **user_id**: 用户自定义ID
+    """
+    try:
+        logger.info(f"接收到创建会话请求: 助手={chat_id}, 名称={request.name}")
+
+        result = service.create_session(
+            chat_id=chat_id,
+            name=request.name,
+            user_id=request.user_id
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"创建会话失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("创建会话时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+# ==================== 扩展功能 ====================
+
+# @router.get(
+#     "/datasets/{dataset_id}",
+#     summary="获取知识库详情",
+#     description="获取指定知识库的详细信息"
+# )
+# async def get_dataset_info(
+#         dataset_id: str,
+#         service: RAGFlowService = Depends(get_ragflow_service)
+# ):
+#     """
+#     获取知识库详情
+#
+#     - **dataset_id**: 知识库ID（路径参数）
+#     """
+#     try:
+#         logger.info(f"接收到获取知识库详情请求: {dataset_id}")
+#         result = service.get_dataset_info(dataset_id)
+#         return result
+#     except RAGFlowServiceError as e:
+#         logger.error(f"获取知识库详情失败: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_400_BAD_REQUEST,
+#             detail=str(e)
+#         )
+#     except Exception as e:
+#         logger.exception("获取知识库详情时发生未知错误")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"服务器内部错误: {str(e)}"
+#         )
+
+
+@router.get(
+    "/datasets",
+    summary="列出所有知识库",
+    description="分页获取所有知识库列表"
+)
+async def list_datasets(
+        page: int = 1,
+        page_size: int = 10,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    列出所有知识库
+
+    - **page**: 页码（默认1）
+    - **page_size**: 每页数量（默认10）
+    """
+    try:
+        logger.info(f"接收到列出知识库请求: page={page}, page_size={page_size}")
+        result = service.list_datasets(page=page, page_size=page_size)
+        return result
+    except RAGFlowServiceError as e:
+        logger.error(f"列出知识库失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("列出知识库时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+# ==================== 文档状态查询相关端点 ====================
+
+@router.get(
+    "/datasets/{dataset_id}/documents/{document_id}/status",
+    summary="查询文档解析状态",
+    description="查询指定文档的解析状态"
+)
+async def get_document_status(
+        dataset_id: str,
+        document_id: str,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    查询文档解析状态
+
+    - **dataset_id**: 知识库ID（路径参数）
+    - **document_id**: 文档ID（路径参数）
+
+    返回状态可能的值：
+    - UNSTART: 未开始
+    - RUNNING: 解析中
+    - CANCEL: 已取消
+    - DONE: 解析完成
+    - FAIL: 解析失败
+    """
+    try:
+        logger.info(f"接收到查询文档状态请求: dataset={dataset_id}, document={document_id}")
+
+        status_value = service.get_document_status(
+            document_id=document_id,
+            dataset_id=dataset_id
+        )
+
+        if status_value is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"未找到文档: {document_id}"
+            )
+
+        return {
+            "code": 0,
+            "data": {
+                "document_id": document_id,
+                "dataset_id": dataset_id,
+                "status": status_value
+            }
+        }
+
+    except RAGFlowServiceError as e:
+        logger.error(f"查询文档状态失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("查询文档状态时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.get(
+    "/datasets/{dataset_id}/documents",
+    summary="获取文档列表",
+    description="获取知识库中的文档列表，支持按状态过滤"
+)
+async def get_documents_list(
+        dataset_id: str,
+        page: int = 1,
+        page_size: int = 10,
+        status_filter: Optional[str] = None,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    获取文档列表
+
+    - **dataset_id**: 知识库ID（路径参数）
+    - **page**: 页码（默认1）
+    - **page_size**: 每页数量（默认10）
+    - **status_filter**: 状态过滤（可选），多个状态用逗号分隔，如: "DONE,RUNNING"
+    """
+    try:
+        logger.info(f"接收到获取文档列表请求: dataset={dataset_id}, page={page}")
+
+        # 处理状态过滤
+        status_list = None
+        if status_filter:
+            status_list = [s.strip().upper() for s in status_filter.split(',')]
+
+        result = service.get_documents_list(
+            dataset_id=dataset_id,
+            page=page,
+            page_size=page_size,
+            status_filter=status_list
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"获取文档列表失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("获取文档列表时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.get(
+    "/datasets/{dataset_id}/ready",
+    summary="检查知识库就绪状态",
+    description="检查知识库是否已准备好（所有文档都已解析完成）"
+)
+async def check_dataset_ready(
+        dataset_id: str,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    检查知识库就绪状态
+
+    - **dataset_id**: 知识库ID（路径参数）
+
+    返回信息包括：
+    - ready: 是否已就绪（所有文档都解析完成）
+    - total: 总文档数
+    - done: 已完成数
+    - running: 解析中数
+    - failed: 失败数
+    - documents: 文档状态详情列表
+    """
+    try:
+        logger.info(f"接收到检查知识库就绪状态请求: dataset={dataset_id}")
+
+        result = service.check_dataset_ready(dataset_id=dataset_id)
+
+        return {
+            "code": 0,
+            "data": result
+        }
+
+    except RAGFlowServiceError as e:
+        logger.error(f"检查知识库就绪状态失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("检查知识库就绪状态时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
