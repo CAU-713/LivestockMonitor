@@ -1,17 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Container,
-  Box,
-  Tabs,
-  Tab,
-  Paper,
-  Typography,
-} from '@mui/material';
-import UserManagement from '@/components/settings/UserManagement';
-import DeviceManagement from '@/components/settings/DeviceManagement';
-import AlertRuleManagement from '@/components/settings/AlertRuleManagement';
+import { Container, Box, Tabs, Tab, Paper, Typography } from '@mui/material';
+import UserManagement from '@/app/(main)/settings/components/UserManagement';
+import DeviceManagement from '@/app/(main)/settings/components/DeviceManagement';
+import AlertRuleManagement from '@/app/(main)/settings/components/AlertRuleManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -24,7 +17,7 @@ const TabPanel = (props: TabPanelProps) => {
 
   return (
     <div
-      role="tabpanel"
+      role='tabpanel'
       hidden={value !== index}
       id={`settings-tabpanel-${index}`}
       aria-labelledby={`settings-tab-${index}`}
@@ -43,12 +36,12 @@ export default function SettingsPage() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth='xl' sx={{ py: 4 }}>
       <Paper sx={{ borderRadius: 2 }}>
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
-          aria-label="settings tabs"
+          aria-label='settings tabs'
           sx={{
             borderBottom: 1,
             borderColor: 'divider',
@@ -65,9 +58,21 @@ export default function SettingsPage() {
             },
           }}
         >
-          <Tab label="用户管理" id="settings-tab-0" aria-controls="settings-tabpanel-0" />
-          <Tab label="设备管理" id="settings-tab-1" aria-controls="settings-tabpanel-1" />
-          <Tab label="警告规则" id="settings-tab-2" aria-controls="settings-tabpanel-2" />
+          <Tab
+            label='用户管理'
+            id='settings-tab-0'
+            aria-controls='settings-tabpanel-0'
+          />
+          <Tab
+            label='设备管理'
+            id='settings-tab-1'
+            aria-controls='settings-tabpanel-1'
+          />
+          <Tab
+            label='警告规则'
+            id='settings-tab-2'
+            aria-controls='settings-tabpanel-2'
+          />
         </Tabs>
 
         <Box sx={{ p: 3 }}>

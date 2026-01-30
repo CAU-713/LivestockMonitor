@@ -14,7 +14,7 @@ import {
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 
-import type { Shed, Camera } from '../../types';
+import type { Shed, Camera } from '../../../../types';
 
 type Props = {
   sheds: Shed[];
@@ -23,7 +23,7 @@ type Props = {
   onSelectCamera: (id: string) => void;
 };
 
-export default function VideoHeader({
+export default function CameraHeader({
   sheds,
   cameras,
   selectedCameraId,
@@ -42,44 +42,34 @@ export default function VideoHeader({
     setAnchorEl(null); // Close popover on selection
   };
 
-  // 转换摄像头名称为视频段名称
-  const getVideoSegmentName = (cameraName: string): string => {
-    return cameraName
-      .replace('A区-全景摄像头', '视频段1')
-      .replace('A区-1号圈摄像头', '视频段2')
-      .replace('摄像头', '视频段');
-  };
-
-  // 转换选项列表中的摄像头名称为视频段名称
-  const getOptionDisplayName = (cameraName: string): string => {
-    return cameraName
-      .replace('A区-全景摄像头', 'A区-视频段1')
-      .replace('A区-1号圈摄像头', 'A区-视频段2')
-      .replace('摄像头', '视频段');
-  };
-
   return (
     <>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="body2" color="text.secondary" fontWeight={500}>舍:</Typography>
-        <Typography variant="body2" fontWeight={500}>
-          {sheds.find((s) => s.id === selectedCamera?.shedId)?.name ?? sheds[0]?.name ?? '-'}
+      <Stack direction='row' spacing={1} alignItems='center'>
+        <Typography variant='body2' color='text.secondary' fontWeight={500}>
+          舍:
+        </Typography>
+        <Typography variant='body2' fontWeight={500}>
+          {sheds.find((s) => s.id === selectedCamera?.shedId)?.name ??
+            sheds[0]?.name ??
+            '-'}
         </Typography>
       </Stack>
 
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <Typography variant="body2" color="text.secondary" fontWeight={500}>视频段:</Typography>
-        <Typography variant="body2" fontWeight={500}>
-          {selectedCamera ? getVideoSegmentName(selectedCamera.name) : selectedCamera?.id ?? '-'}
+      <Stack direction='row' spacing={1.5} alignItems='center'>
+        <Typography variant='body2' color='text.secondary' fontWeight={500}>
+          摄像头:
+        </Typography>
+        <Typography variant='body2' fontWeight={500}>
+          {selectedCamera?.name ?? selectedCamera?.id ?? '-'}
         </Typography>
 
         <div>
           <Button
-            variant="outlined"
-            size="small"
+            variant='outlined'
+            size='small'
             onClick={(e) => setAnchorEl(e.currentTarget)}
           >
-            选择视频段
+            选择摄像头
           </Button>
 
           <Popover
@@ -94,16 +84,31 @@ export default function VideoHeader({
               {sheds.map((shed) => (
                 <div key={shed.id}>
                   <ListItemButton
-                    onClick={() => setExpandedShedId((prev) => (prev === shed.id ? null : shed.id))}
+                    onClick={() =>
+                      setExpandedShedId((prev) =>
+                        prev === shed.id ? null : shed.id
+                      )
+                    }
                   >
                     <ListItemText primary={shed.name} />
-                    {expandedShedId === shed.id ? <ExpandLess /> : <ExpandMore />}
+                    {expandedShedId === shed.id ? (
+                      <ExpandLess />
+                    ) : (
+                      <ExpandMore />
+                    )}
                   </ListItemButton>
 
-                  <Collapse in={expandedShedId === shed.id} timeout="auto" unmountOnExit>
-                    <List component="div" disablePadding sx={{ pl: 2 }}>
-                      {cameras.filter((c) => c.shedId === shed.id).length === 0 && (
-                        <ListItem><ListItemText secondary="(无视频段)" /></ListItem>
+                  <Collapse
+                    in={expandedShedId === shed.id}
+                    timeout='auto'
+                    unmountOnExit
+                  >
+                    <List component='div' disablePadding sx={{ pl: 2 }}>
+                      {cameras.filter((c) => c.shedId === shed.id).length ===
+                        0 && (
+                        <ListItem>
+                          <ListItemText secondary='(无摄像头)' />
+                        </ListItem>
                       )}
                       {cameras
                         .filter((c) => c.shedId === shed.id)
@@ -113,7 +118,7 @@ export default function VideoHeader({
                             selected={selectedCameraId === cam.id}
                             onClick={() => handleSelectCamera(cam.id)}
                           >
-                            <ListItemText primary={getOptionDisplayName(cam.name)} />
+                            <ListItemText primary={cam.name} />
                           </ListItemButton>
                         ))}
                     </List>

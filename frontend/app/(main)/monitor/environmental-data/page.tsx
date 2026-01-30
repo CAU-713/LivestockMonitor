@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useMemo, useCallback } from 'react';
 import { Box, Typography } from '@mui/material';
-import EnvironmentalDataFilter from '../../../../components/monitor/EnvironmentalDataFilter';
-import SensorStatusList from '../../../../components/monitor/SensorStatusList';
+import EnvironmentalDataFilter from '../components/EnvironmentalDataFilter';
+import SensorStatusList from '../components/SensorStatusList';
 import { mockSheds, mockSensors } from '@/constants/mockData';
 import { Sensor } from '@/types';
 

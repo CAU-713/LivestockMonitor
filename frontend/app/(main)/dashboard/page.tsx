@@ -22,9 +22,9 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import AirIcon from '@mui/icons-material/Air';
 
 // Import Components and Data
-import KPICard from '../../../components/dashboard/KPICard';
-import DeviceStatusList from '../../../components/dashboard/AlertList';
-import ComfortAssessmentPanel from '../../../components/dashboard/ComfortAssessmentPanel';
+import KPICard from './components/KPICard';
+import DeviceStatusList from './components/AlertList';
+import ComfortAssessmentPanel from './components/ComfortAssessmentPanel';
 import LineChart from '../../../components/charts/LineChart';
 import {
   mockDashboardKPIs,
@@ -34,7 +34,7 @@ import {
   mockSheds,
   mockSensors,
 } from '../../../constants/mockData';
-import type { ComfortAssessment } from '../../../components/dashboard/ComfortAssessmentPanel';
+import type { ComfortAssessment } from './components/ComfortAssessmentPanel';
 import { MergedChartData } from '@/types';
 
 type ChartType = 'temperature' | 'humidity';
@@ -87,7 +87,6 @@ const DashboardPage = () => {
       unit: mockDashboardKPIs.avgTemperature.unit,
       status: mockDashboardKPIs.avgTemperature.status as KPIStatus,
     },
-    
   ];
 
   return (
@@ -106,19 +105,23 @@ const DashboardPage = () => {
       ))}
 
       {/* Row 2: Main Chart and Offline Devices */}
-      <Grid item xs={12} lg={8} sx={{ height: 430}}>
+      <Grid item xs={12} lg={8} sx={{ height: 430 }}>
         <Paper elevation={3} sx={{ p: 2, borderRadius: 3, height: '100%' }}>
-          <Stack direction="row" alignItems="center" mb={2} spacing={2}>
-            <Typography variant="h6">畜舍总体趋势</Typography>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
+          <Stack direction='row' alignItems='center' mb={2} spacing={2}>
+            <Typography variant='h6'>畜舍总体趋势</Typography>
+            <FormControl size='small' sx={{ minWidth: 120 }}>
               <InputLabel>指标</InputLabel>
-              <Select value={selectedChart} label="指标" onChange={handleChartChange}>
-                <MenuItem value="temperature">温度</MenuItem>
-                <MenuItem value="humidity">湿度</MenuItem>
+              <Select
+                value={selectedChart}
+                label='指标'
+                onChange={handleChartChange}
+              >
+                <MenuItem value='temperature'>温度</MenuItem>
+                <MenuItem value='humidity'>湿度</MenuItem>
               </Select>
             </FormControl>
             {chartDataMap[selectedChart]?.data.length > 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant='body2' color='text.secondary'>
                 {(() => {
                   // 当前日期 = 结束日期
                   const endDate = new Date();
@@ -154,11 +157,13 @@ const DashboardPage = () => {
                     .toString()
                     .padStart(2, '0')} - ${endMonth}/${endDay}/${lastParsed.hour
                     .toString()
-                    .padStart(2, '0')}:${lastParsed.minute.toString().padStart(2, '0')}`;
+                    .padStart(
+                      2,
+                      '0'
+                    )}:${lastParsed.minute.toString().padStart(2, '0')}`;
                 })()}
               </Typography>
             )}
-
           </Stack>
           <LineChart chartData={chartDataMap[selectedChart]} />
         </Paper>
@@ -169,25 +174,38 @@ const DashboardPage = () => {
 
       {/* Row 3: Shed Overviews */}
       <Grid item xs={12}>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant='h6' gutterBottom>
           各区域概览
         </Typography>
       </Grid>
       {mockSheds.map((shed) => {
         const shedSensors = mockSensors.filter((s) => s.shedId === shed.id);
-        const avgTemp = shedSensors.find((s) => s.type === 'Temperature')?.lastReading ?? 'N/A';
-        const avgHumidity = shedSensors.find((s) => s.type === 'Humidity')?.lastReading ?? 'N/A';
-        const avgAmmonia = shedSensors.find((s) => s.type === 'Ammonia')?.lastReading ?? 'N/A';
-        const avgCO2 = shedSensors.find((s) => s.type === 'CO2')?.lastReading ?? 'N/A';
-        const avgCH4 = shedSensors.find((s) => s.type === 'CH4')?.lastReading ?? 'N/A';
-        const avgOxygen = shedSensors.find((s) => s.type === 'Oxygen')?.lastReading ?? 'N/A';
-        const avgWindSpeed = shedSensors.find((s) => s.type === 'WindSpeed')?.lastReading ?? 'N/A';
-        const avgH2S = shedSensors.find((s) => s.type === 'H2S')?.lastReading ?? 'N/A';
-        const avgPM = shedSensors.find((s) => s.type === 'PM')?.lastReading ?? 'N/A';
-        const avgLight = shedSensors.find((s) => s.type === 'Light')?.lastReading ?? 'N/A';
+        const avgTemp =
+          shedSensors.find((s) => s.type === 'Temperature')?.lastReading ??
+          'N/A';
+        const avgHumidity =
+          shedSensors.find((s) => s.type === 'Humidity')?.lastReading ?? 'N/A';
+        const avgAmmonia =
+          shedSensors.find((s) => s.type === 'Ammonia')?.lastReading ?? 'N/A';
+        const avgCO2 =
+          shedSensors.find((s) => s.type === 'CO2')?.lastReading ?? 'N/A';
+        const avgCH4 =
+          shedSensors.find((s) => s.type === 'CH4')?.lastReading ?? 'N/A';
+        const avgOxygen =
+          shedSensors.find((s) => s.type === 'Oxygen')?.lastReading ?? 'N/A';
+        const avgWindSpeed =
+          shedSensors.find((s) => s.type === 'WindSpeed')?.lastReading ?? 'N/A';
+        const avgH2S =
+          shedSensors.find((s) => s.type === 'H2S')?.lastReading ?? 'N/A';
+        const avgPM =
+          shedSensors.find((s) => s.type === 'PM')?.lastReading ?? 'N/A';
+        const avgLight =
+          shedSensors.find((s) => s.type === 'Light')?.lastReading ?? 'N/A';
 
         const getSensorValue = (type: string) =>
-          shedSensors.find((s) => s.type === type as any)?.lastReading as number | undefined;
+          shedSensors.find((s) => s.type === (type as any))?.lastReading as
+            | number
+            | undefined;
 
         // 使用用户提供的规则逐项判断（按字面规则实现）
         const assessEnvironment = (
@@ -197,9 +215,15 @@ const DashboardPage = () => {
           radiation?: number | string
         ): ComfortAssessment => {
           const t = typeof temp === 'number' ? temp : parseFloat(String(temp));
-          const h = typeof humidity === 'number' ? humidity : parseFloat(String(humidity));
+          const h =
+            typeof humidity === 'number'
+              ? humidity
+              : parseFloat(String(humidity));
           const w = typeof wind === 'number' ? wind : parseFloat(String(wind));
-          const r = typeof radiation === 'number' ? radiation : parseFloat(String(radiation));
+          const r =
+            typeof radiation === 'number'
+              ? radiation
+              : parseFloat(String(radiation));
 
           // THI 指数已移除，保持按规则判断
 
@@ -296,34 +320,63 @@ const DashboardPage = () => {
         const envWind = getSensorValue('WindSpeed') ?? avgWindSpeed;
         const envRadiation = getSensorValue('Radiation') ?? undefined;
 
-        const computedAssessment = assessEnvironment(envTemp, envHumidity, envWind, envRadiation);
+        const computedAssessment = assessEnvironment(
+          envTemp,
+          envHumidity,
+          envWind,
+          envRadiation
+        );
 
         return (
           <Grid item xs={12} md={6} key={shed.id}>
             <Paper elevation={2} sx={{ p: 2, borderRadius: 3 }}>
               <Stack spacing={2}>
                 {/* 上部分：信息和按钮 */}
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Stack
+                  direction='row'
+                  justifyContent='space-between'
+                  alignItems='flex-start'
+                >
                   <Box>
-                    <Typography variant="h6">{shed.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant='h6'>{shed.name}</Typography>
+                    <Typography variant='body2' color='text.secondary'>
                       {shed.livestockCount} 只动物
                     </Typography>
-                    <Stack direction="row" spacing={2} mt={1} flexWrap="wrap">
-                      <Typography variant="caption">温度: {avgTemp}°C</Typography>
-                      <Typography variant="caption">湿度: {avgHumidity}%</Typography>
-                      <Typography variant="caption">氨气: {avgAmmonia}ppm</Typography>
-                      <Typography variant="caption">CO₂: {avgCO2}ppm</Typography>
-                      <Typography variant="caption">甲烷: {avgCH4}ppm</Typography>
-                      <Typography variant="caption">含氧量: {avgOxygen}%</Typography>
-                      <Typography variant="caption">风速: {avgWindSpeed}m/s</Typography>
-                      <Typography variant="caption">硫化氢: {avgH2S}ppm</Typography>
-                      <Typography variant="caption">PM2.5/PM10: {avgPM}μg/m³</Typography>
-                      <Typography variant="caption">光照强度: {avgLight}lux</Typography>
+                    <Stack direction='row' spacing={2} mt={1} flexWrap='wrap'>
+                      <Typography variant='caption'>
+                        温度: {avgTemp}°C
+                      </Typography>
+                      <Typography variant='caption'>
+                        湿度: {avgHumidity}%
+                      </Typography>
+                      <Typography variant='caption'>
+                        氨气: {avgAmmonia}ppm
+                      </Typography>
+                      <Typography variant='caption'>
+                        CO₂: {avgCO2}ppm
+                      </Typography>
+                      <Typography variant='caption'>
+                        甲烷: {avgCH4}ppm
+                      </Typography>
+                      <Typography variant='caption'>
+                        含氧量: {avgOxygen}%
+                      </Typography>
+                      <Typography variant='caption'>
+                        风速: {avgWindSpeed}m/s
+                      </Typography>
+                      <Typography variant='caption'>
+                        硫化氢: {avgH2S}ppm
+                      </Typography>
+                      <Typography variant='caption'>
+                        PM2.5/PM10: {avgPM}μg/m³
+                      </Typography>
+                      <Typography variant='caption'>
+                        光照强度: {avgLight}lux
+                      </Typography>
                     </Stack>
                   </Box>
                   <Button
-                    variant="contained"
+                    variant='contained'
                     component={Link}
                     href={`/monitor/environmental-data?shed=${shed.id}`}
                     sx={{ whiteSpace: 'nowrap' }}

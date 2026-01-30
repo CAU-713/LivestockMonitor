@@ -41,17 +41,19 @@ frontend/
 │   │   └── Login/
 │   └── (main)/              # 主应用页面 (包含侧边栏和顶部栏布局)
 │       ├── dashboard/       # [总览] 页面
+│       │   └── components/  # 总览页专用组件
 │       ├── monitor/         # [实时监控] 页面 (分为环境和视频)
+│       │   └── components/  # 监控页专用组件
 │       ├── history/         # [历史数据] 页面
 │       │   ├── environmental-data/
 │       │   └── video-data/
 │       └── settings/        # [系统设置] 页面
-├── components/              # React 组件库
+│           └── components/  # 设置页专用组件
+├── components/              # 共享组件库 (跨页面复用)
 │   ├── layout/              # 布局组件 (Sidebar, Header)
-│   ├── dashboard/           # 总览页专用组件 (KPICard, Charts)
-│   ├── monitor/             # 监控页专用组件 (VideoPlayer)
-│   ├── charts/              # 图表组件封装
-│   └── ui/                  # 通用基础UI组件 (Button, Modal)
+│   ├── charts/              # 通用图表组件封装
+│   ├── ui/                  # 通用基础UI组件 (Button, Modal)
+│   └── chat/                # 共享聊天组件
 ├── constants/               # [关键] 静态模拟数据
 │   └── mockData.ts          # 存放所有页面的假数据
 ├── public/                  # 静态资源 (图片, 图标)
@@ -68,7 +70,9 @@ frontend/
 ### 1. 数据驱动开发流程
    - **定义数据结构**: 在 `types/index.ts` 中定义新的数据接口。
    - **创建模拟数据**: 在 `constants/mockData.ts` 中根据接口创建具体的假数据。
-   - **构建组件**: 在 `components/` 目录中创建可复用的UI组件。
+   - **构建组件**:
+     - **页面专用组件**: 放在 `app/(main)/<route>/components/` 中。
+     - **共享组件**: 放在 `components/` 中。
    - **组合页面**: 在 `app/(main)/` 对应的页面中，导入并组合组件，使用模拟数据进行渲染。
 
 ### 2. 使用 Mock 数据
