@@ -1258,3 +1258,17 @@ export const mockCorrelationMatrix: CorrelationMatrix = {
     Tem_4: 1,
   },
 };
+
+// Mock p-values generated from absolute correlation coefficients (示例数据)
+export const mockCorrelationPValues: CorrelationMatrix = (() => {
+  const p: any = {};
+  Object.keys(mockCorrelationMatrix).forEach((r) => {
+    p[r] = {};
+    Object.keys(mockCorrelationMatrix[r]).forEach((c) => {
+      const coef = Math.abs((mockCorrelationMatrix as any)[r][c] ?? 0);
+      // smaller corr -> larger p-value; clamp to [0.001, 1]
+      p[r][c] = parseFloat(Math.min(0.001 + (1 - coef) * 0.5, 1).toFixed(3));
+    });
+  });
+  return p as CorrelationMatrix;
+})();
