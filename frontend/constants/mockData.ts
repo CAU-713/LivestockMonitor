@@ -294,7 +294,7 @@ export const mockCameras: Camera[] = [
     shedId: 'shed-a',
     status: 'online',
     streamUrl:
-      'http://localhost:8000/detect/infer?model=app/checkpoints/v8.pt&video=app/videos/test.mp4',
+      'https://img.wjwj.top/2026/02/04/ac40c42327ea6eefe9a5fd316ab9cc7b.mp4',
     thumbnailUrl: 'https://picsum.photos/seed/cam-a-01/400/300',
   },
   {
@@ -304,7 +304,7 @@ export const mockCameras: Camera[] = [
     penId: 'pen-a1',
     status: 'online',
     streamUrl:
-      'http://localhost:8000/detect/infer?model=app/checkpoints/v8.pt&video=app/videos/test.mp4',
+      'https://img.wjwj.top/2026/02/04/ac40c42327ea6eefe9a5fd316ab9cc7b.mp4',
     thumbnailUrl: 'https://picsum.photos/seed/cam-a-02/400/300',
   },
   {
@@ -314,7 +314,7 @@ export const mockCameras: Camera[] = [
     penId: 'pen-b1',
     status: 'offline',
     streamUrl:
-      'http://localhost:8000/detect/infer?model=app/checkpoints/v8.pt&video=app/videos/test.mp4',
+      'https://img.wjwj.top/2026/02/04/ac40c42327ea6eefe9a5fd316ab9cc7b.mp4',
     thumbnailUrl: 'https://picsum.photos/seed/cam-b-01/400/300',
   },
 ];
