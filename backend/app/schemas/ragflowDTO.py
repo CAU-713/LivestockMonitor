@@ -4,9 +4,8 @@ RAGFlow API Models
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any,Union
 from enum import Enum
-
 
 class ChunkMethod(str, Enum):
     """分块方法枚举"""
@@ -357,6 +356,115 @@ class DocumentsListResponse(BaseModel):
                         }
                     ],
                     "total": 1
+                }
+            }
+        }
+
+
+# ==================== 聊天对话相关模型 ====================
+
+class MetadataCondition(BaseModel):
+    """元数据过滤条件"""
+    name: str = Field(..., description="元数据键名")
+    comparison_operator: str = Field(
+        ...,
+        description="比较操作符: is, not is, contains, not contains, start with, end with, empty, not empty, >, <, ≥, ≤"
+    )
+    value: Optional[Union[str, int, float, bool]] = Field(None, description="比较值")
+
+
+class MetadataFilter(BaseModel):
+    """元数据过滤器"""
+    logic: str = Field(..., description="逻辑运算符: and 或 or")
+    conditions: List[MetadataCondition] = Field(..., description="条件列表")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "logic": "and",
+                "conditions": [
+                    {
+                        "name": "author",
+                        "comparison_operator": "is",
+                        "value": "bob"
+                    }
+                ]
+            }
+        }
+
+
+class ChatCompletionRequest(BaseModel):
+    """聊天对话请求"""
+    question: str = Field(..., description="用户问题")
+    stream: bool = Field(True, description="是否使用流式输出")
+    session_id: Optional[str] = Field(None, description="会话ID")
+    user_id: Optional[str] = Field(None, description="用户自定义ID")
+    metadata_condition: Optional[MetadataFilter] = Field(None, description="元数据过滤条件")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "question": "Who are you?",
+                "stream": True,
+                "session_id": "9fa7691cb85c11ef9c5f0242ac120005",
+                "metadata_condition": {
+                    "logic": "and",
+                    "conditions": [
+                        {
+                            "name": "author",
+                            "comparison_operator": "is",
+                            "value": "bob"
+                        }
+                    ]
+                }
+            }
+        }
+
+
+class ChunkReference(BaseModel):
+    """引用块信息"""
+    id: str
+    content: str
+    document_id: str
+    document_name: str
+    dataset_id: str
+    similarity: float
+    vector_similarity: float
+    term_similarity: float
+
+
+class ChatReference(BaseModel):
+    """聊天引用信息"""
+    total: int
+    chunks: List[ChunkReference]
+    doc_aggs: List[Dict[str, Any]]
+
+
+class ChatCompletionData(BaseModel):
+    """聊天响应数据"""
+    answer: str
+    reference: Optional[Dict[str, Any]] = None
+    audio_binary: Optional[str] = None
+    id: Optional[str] = None
+    session_id: str
+    prompt: Optional[str] = None
+    created_at: Optional[float] = None
+
+
+class ChatCompletionResponse(BaseModel):
+    """聊天对话响应"""
+    code: int = 0
+    message: Optional[str] = None
+    data: Optional[Union[ChatCompletionData, bool]] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "code": 0,
+                "data": {
+                    "answer": "Hi! I'm your assistant.",
+                    "reference": {},
+                    "session_id": "b01eed84b85611efa0e90242ac120005"
                 }
             }
         }
