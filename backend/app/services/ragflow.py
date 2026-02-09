@@ -7,6 +7,7 @@ import requests
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -562,3 +563,117 @@ class RAGFlowService:
         except Exception as e:
             logger.error(f"检查知识库就绪状态失败: {e}")
             raise RAGFlowServiceError(f"检查就绪状态失败: {str(e)}")
+
+    def chat_with_assistant(
+            self,
+            chat_id: str,
+            question: str,
+            session_id: Optional[str] = None,
+            stream: bool = True,
+            user_id: Optional[str] = None,
+            metadata_condition: Optional[Dict[str, Any]] = None
+    ) -> Union[Dict[str, Any], Any]:
+        """
+        与聊天助手对话
+
+        Args:
+            chat_id: 聊天助手ID
+            question: 用户问题
+            session_id: 会话ID（可选，不提供则创建新会话）
+            stream: 是否使用流式输出（默认True）
+            user_id: 用户自定义ID（仅在未提供session_id时有效）
+            metadata_condition: 元数据过滤条件
+
+        Returns:
+            如果stream=False，返回完整响应字典
+            如果stream=True，返回生成器对象
+
+        Raises:
+            RAGFlowServiceError: 对话失败时抛出
+        """
+        logger.info(f"开始对话: chat_id={chat_id}, question={question[:50]}...")
+
+        url = f"{self.base_url}/api/v1/chats/{chat_id}/completions"
+
+        payload = {
+            "question": question,
+            "stream": stream
+        }
+
+        if session_id:
+            payload["session_id"] = session_id
+        if user_id:
+            payload["user_id"] = user_id
+        if metadata_condition:
+            payload["metadata_condition"] = metadata_condition
+
+        try:
+            if stream:
+                # 流式响应
+                response = requests.post(
+                    url,
+                    headers=self.headers,
+                    json=payload,
+                    stream=True,
+                    timeout=60
+                )
+
+                if response.status_code != 200:
+                    logger.error(f"对话请求失败: {response.status_code}")
+                    raise RAGFlowServiceError(f"对话请求失败: {response.status_code}")
+
+                return self._stream_response(response)
+            else:
+                # 非流式响应
+                response = requests.post(
+                    url,
+                    headers=self.headers,
+                    json=payload,
+                    timeout=60
+                )
+
+                result = self._handle_response(response)
+                logger.info("对话完成")
+                return result
+
+        except requests.RequestException as e:
+            logger.error(f"对话网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def _stream_response(self, response: requests.Response):
+        """
+        处理流式响应
+
+        Args:
+            response: 流式响应对象
+
+        Yields:
+            每次流式更新的数据
+        """
+        try:
+            for line in response.iter_lines():
+                if line:
+                    line_str = line.decode('utf-8')
+
+                    # 跳过空行
+                    if not line_str.strip():
+                        continue
+
+                    # 处理 data: 开头的行
+                    if line_str.startswith('data:'):
+                        data_str = line_str[5:].strip()
+
+                        # 跳过空数据
+                        if not data_str:
+                            continue
+
+                        try:
+                            data = json.loads(data_str)
+                            yield data
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"解析流式数据失败: {e}, 数据: {data_str}")
+                            continue
+
+        except Exception as e:
+            logger.error(f"处理流式响应失败: {e}")
+            raise RAGFlowServiceError(f"处理流式响应失败: {str(e)}")

@@ -16,8 +16,7 @@ from app.schemas.ragflowDTO import (
     DeleteDocumentsRequest, DeleteDocumentsResponse,
     CreateChatAssistantRequest, CreateChatAssistantResponse,
     CreateSessionRequest, CreateSessionResponse,
-    UploadDocumentsResponse, ErrorResponse,
-    DocumentStatusResponse, DatasetReadinessResponse, DocumentsListResponse
+    UploadDocumentsResponse, ErrorResponse, ChatCompletionRequest
 )
 from app.services.ragflow import RAGFlowService, RAGFlowServiceError
 
@@ -573,6 +572,107 @@ async def check_dataset_ready(
         )
     except Exception as e:
         logger.exception("检查知识库就绪状态时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+# ==================== 聊天对话端点 ====================
+
+@router.post(
+    "/chat-assistants/{chat_id}/completions",
+    summary="与聊天助手对话",
+    description="向聊天助手提问并获取响应（支持流式和非流式）"
+)
+async def chat_with_assistant(
+        chat_id: str,
+        request: ChatCompletionRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    与聊天助手对话
+
+    - **chat_id**: 聊天助手ID（路径参数）
+    - **question**: 用户问题（必填）
+    - **stream**: 是否使用流式输出（默认True）
+    - **session_id**: 会话ID（可选，不提供则创建新会话）
+    - **user_id**: 用户自定义ID（可选）
+    - **metadata_condition**: 元数据过滤条件（可选）
+
+    流式响应说明：
+    - 使用 Server-Sent Events (SSE) 格式
+    - 每次更新返回增量内容
+    - 最后一条消息为 {"code": 0, "data": true}
+
+    非流式响应：
+    - 返回完整的答案和引用信息
+    """
+    try:
+        logger.info(f"接收到对话请求: chat_id={chat_id}, question={request.question[:50]}")
+
+        # 准备元数据过滤条件
+        metadata_condition = None
+        if request.metadata_condition:
+            metadata_condition = request.metadata_condition.dict()
+
+        if request.stream:
+            # 流式响应
+            from fastapi.responses import StreamingResponse
+
+            def generate():
+                try:
+                    result = service.chat_with_assistant(
+                        chat_id=chat_id,
+                        question=request.question,
+                        session_id=request.session_id,
+                        stream=True,
+                        user_id=request.user_id,
+                        metadata_condition=metadata_condition
+                    )
+
+                    for data in result:
+                        import json
+                        yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+                except Exception as e:
+                    logger.error(f"流式对话异常: {e}")
+                    error_data = {
+                        "code": 500,
+                        "message": str(e)
+                    }
+                    yield f"data: {json.dumps(error_data)}\n\n"
+
+            return StreamingResponse(
+                generate(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"
+                }
+            )
+        else:
+            # 非流式响应
+            result = service.chat_with_assistant(
+                chat_id=chat_id,
+                question=request.question,
+                session_id=request.session_id,
+                stream=False,
+                user_id=request.user_id,
+                metadata_condition=metadata_condition
+            )
+
+            return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"对话失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("对话时发生未知错误")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"服务器内部错误: {str(e)}"
