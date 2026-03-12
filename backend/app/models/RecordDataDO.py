@@ -19,13 +19,55 @@ class BehaviorRecordDO(SQLModel, table=True):
     lying_count: int = Field(default=0, description="躺卧数量")
 
 class SensorRecordDO(SQLModel, table=True):
-    """传感器记录数据对象"""
+    """传感器数据历史记录"""
     __tablename__ = "sensor_record"
 
     id: Optional[int] = Field(default=None, primary_key=True, description="记录唯一标识符")
     sensor_id: int = Field(foreign_key="sensor.id", description="传感器ID")
-    timestamp: datetime = Field(description="时间戳")
-    data: Dict[Any, Any] = Field(default={}, sa_type=JSON, description="传感器读数数据，JSON格式")
+    value: float = Field(description="传感器读数值")
+    timestamp: datetime = Field(description="数据采集时间")
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow, description="记录创建时间")
+
+    class Config:
+        """配置"""
+        json_schema_extra = {
+            "example": {
+                "sensor_id": 1,
+                "value": 22.5,
+                "timestamp": "2023-10-31T14:20:00Z"
+            }
+        }
+
+
+class VideoRecordDO(SQLModel, table=True):
+    """视频数据历史记录"""
+    __tablename__ = "video_record"
+
+    id: Optional[int] = Field(default=None, primary_key=True, description="视频唯一标识符")
+    camera_id: int = Field(foreign_key="camera.id", description="摄像头ID")
+    shed_id: int = Field(foreign_key="shed.id", description="所属羊舍ID")
+    start_time: datetime = Field(description="视频开始时间")
+    end_time: datetime = Field(description="视频结束时间")
+    duration: int = Field(description="视频时长(秒)")
+    file_path: Optional[str] = Field(default=None, max_length=500, description="视频文件路径")
+    thumbnail_url: Optional[str] = Field(default=None, max_length=500, description="缩略图URL")
+    file_size: Optional[int] = Field(default=None, description="文件大小(字节)")
+    resolution: Optional[str] = Field(default=None, max_length=20, description="视频分辨率")
+    description: Optional[str] = Field(default=None, max_length=500, description="视频描述")
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow, description="创建时间")
+
+    class Config:
+        """配置"""
+        json_schema_extra = {
+            "example": {
+                "camera_id": 1,
+                "shed_id": 1,
+                "start_time": "2026-03-10T08:00:00Z",
+                "end_time": "2026-03-10T08:05:00Z",
+                "duration": 300,
+                "thumbnail_url": "https://example.com/thumbnail.jpg"
+            }
+        }
 
 class HouseComprehensiveEnvironmentDO(SQLModel, table=True):
     """环境监测综合记录数据对象"""

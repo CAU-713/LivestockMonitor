@@ -5,7 +5,7 @@ from .DeviceDO import SensorDO, CameraDO, SensorTypeDO
 from .FacilityDO import ShedDO, PenDO
 from .HealthDataDO import WeightRecordDO, FeedIntakeRecordDO, BodyTemperatureRecordDO, RespirationRecordDO, \
     SerumRecordDO
-from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, HouseComprehensiveEnvironmentDO, \
+from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, VideoRecordDO, HouseComprehensiveEnvironmentDO, \
     EnterpriseFatteningEnvironmentDO
 from .UserDO import UserDO
 
@@ -21,6 +21,7 @@ __all__ = [
     "PenDO",
     "BehaviorRecordDO",
     "SensorRecordDO",
+    "VideoRecordDO",
     "HouseComprehensiveEnvironmentDO",
     "EnterpriseFatteningEnvironmentDO",
     "UserDO",
