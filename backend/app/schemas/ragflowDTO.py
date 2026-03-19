@@ -198,10 +198,19 @@ class DocumentInfo(BaseModel):
     id: str
     name: str
     size: Optional[int] = None
-    chunk_method: str
-    created_by: str
-    create_date: str
-    status: str
+    chunk_method: Optional[str] = None
+    created_by: Optional[str] = None
+    create_date: Optional[str] = None
+    status: Optional[str] = None
+    dataset_id: Optional[str] = None
+    location: Optional[str] = None
+    parser_config: Optional[Dict[str, Any]] = None
+    pipeline_id: Optional[str] = None
+    run: Optional[str] = None
+    source_type: Optional[str] = None
+    suffix: Optional[str] = None
+    thumbnail: Optional[str] = None
+    type: Optional[str] = None
 
 
 class UploadDocumentsResponse(BaseResponse):
@@ -220,15 +229,72 @@ class DeleteDocumentsResponse(BaseResponse):
 
 
 class ChatAssistantInfo(BaseModel):
-    """聊天助手信息"""
+    """
+    聊天助手信息
+
+    RAGFlow 原始 API 返回字段名为 "datasets"（完整 DatasetInfo 对象列表），
+    通过 validator 自动从 datasets 提取 id 列表，填充到 dataset_ids 字段，
+    保持与前端约定的接口格式一致。
+    """
     id: str
     name: str
     avatar: Optional[str] = None
-    dataset_ids: List[str]
-    llm: Dict[str, Any]
-    prompt: Dict[str, Any]
-    create_date: str
-    update_date: str
+    description: Optional[str] = None
+
+    # RAGFlow 原始字段：完整的 dataset 对象列表
+    # 设为 Optional 以兼容创建接口返回（可能已经是 dataset_ids 格式）
+    datasets: Optional[List[Dict[str, Any]]] = Field(None, exclude=True)
+
+    # 对外暴露的字段：知识库 ID 列表
+    dataset_ids: Optional[List[str]] = Field(default_factory=list)
+
+    llm: Dict[str, Any] = Field(default_factory=dict)
+    prompt: Dict[str, Any] = Field(default_factory=dict)
+    create_date: str = ""
+    update_date: str = ""
+
+    @validator('dataset_ids', pre=True, always=True)
+    def extract_dataset_ids(cls, v, values):
+        """
+        如果 dataset_ids 为空/None，尝试从 datasets 字段中提取 id。
+        兼容两种数据来源：
+          1. list_chat_assistants 返回：datasets=[{id:..., name:...}, ...]
+          2. create_chat_assistant 返回：dataset_ids=[...] 或 datasets=[...]
+        """
+        # 已有有效值则直接使用
+        if v:
+            return v
+
+        # 从 datasets 字段提取
+        datasets = values.get('datasets')
+        if datasets and isinstance(datasets, list):
+            extracted = []
+            for item in datasets:
+                if isinstance(item, dict):
+                    item_id = item.get('id')
+                    if item_id:
+                        extracted.append(item_id)
+                elif isinstance(item, str):
+                    # 兼容直接传 id 字符串的情况
+                    extracted.append(item)
+            return extracted
+
+        return v or []
+
+    class Config:
+        # 允许额外字段（RAGFlow 返回字段比模型多）
+        extra = 'allow'
+        json_schema_extra = {
+            "example": {
+                "id": "chat_id_123",
+                "name": "我的助手",
+                "dataset_ids": ["dataset_id_1"],
+                "llm": {"model_name": "qwen-max@Tongyi-Qianwen"},
+                "prompt": {"opener": "您好！"},
+                "create_date": "2024-01-01T00:00:00",
+                "update_date": "2024-01-01T00:00:00"
+            }
+        }
 
 
 class CreateChatAssistantResponse(BaseResponse):
@@ -236,14 +302,74 @@ class CreateChatAssistantResponse(BaseResponse):
     data: Optional[ChatAssistantInfo] = None
 
 
+# class SessionInfo(BaseModel):
+#     """会话信息"""
+#     id: str
+#     chat_id: str
+#     name: str
+#     messages: List[Dict[str, str]]
+#     create_date: str
+#     update_date: str
+
+class SessionMessage(BaseModel):
+    """
+    会话中单条消息
+    RAGFlow 实际返回字段类型比 Dict[str, str] 复杂，需单独定义。
+    """
+    role: str = ""
+    content: str = ""
+
+    # reference 可能是空列表 [] 或引用块对象列表，不是字符串
+    reference: Optional[Union[List[Any], Dict[str, Any], str]] = None
+
+    # doc_ids 可能是空列表 []
+    doc_ids: Optional[Union[List[str], str]] = None
+
+    # created_at 可能是 float 时间戳，也可能是字符串
+    created_at: Optional[Union[float, int, str]] = None
+
+    # 允许 RAGFlow 返回其他未知字段（如 prompt、audio_binary 等）
+    class Config:
+        extra = "allow"
+
+
 class SessionInfo(BaseModel):
-    """会话信息"""
+    """
+    会话信息
+
+    修复点：messages 从 List[Dict[str, str]] 改为 List[SessionMessage]，
+    以兼容 RAGFlow 返回的非字符串字段（reference/doc_ids/created_at）。
+    """
     id: str
     chat_id: str
     name: str
-    messages: List[Dict[str, str]]
-    create_date: str
-    update_date: str
+
+    # 使用 SessionMessage 替代 Dict[str, str]
+    messages: List[SessionMessage] = Field(default_factory=list)
+
+    create_date: str = ""
+    update_date: str = ""
+
+    class Config:
+        extra = "allow"
+        json_schema_extra = {
+            "example": {
+                "id": "session_id_123",
+                "chat_id": "chat_id_456",
+                "name": "新会话",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "你好",
+                        "reference": [],
+                        "doc_ids": [],
+                        "created_at": 1773921511.818966
+                    }
+                ],
+                "create_date": "2024-01-01T00:00:00",
+                "update_date": "2024-01-01T00:00:00"
+            }
+        }
 
 
 class CreateSessionResponse(BaseResponse):
@@ -468,3 +594,113 @@ class ChatCompletionResponse(BaseModel):
                 }
             }
         }
+
+"""
+RAGFlow DTO 补充代码
+"""
+
+# ==================== 聊天助手管理 - 新增请求模型 ====================
+
+class UpdateChatAssistantRequest(BaseModel):
+    """更新聊天助手请求"""
+    name: str = Field(..., description="助手名称（必填）")
+    dataset_ids: Optional[List[str]] = Field(None, description="关联的知识库ID列表")
+    avatar: Optional[str] = Field(None, description="Base64编码的头像")
+    llm: Optional[LLMConfig] = Field(None, description="LLM配置")
+    prompt: Optional[PromptConfig] = Field(None, description="提示配置")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "更新后的助手名称",
+                "dataset_ids": ["dataset_id_1"],
+                "llm": {
+                    "temperature": 0.5
+                }
+            }
+        }
+
+
+class DeleteChatAssistantsRequest(BaseModel):
+    """删除聊天助手请求"""
+    ids: Optional[List[str]] = Field(None, description="要删除的助手ID列表")
+    delete_all: Optional[bool] = Field(False, description="是否删除所有助手")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "ids": ["chat_id_1", "chat_id_2"]
+            }
+        }
+
+
+class ListChatAssistantsParams(BaseModel):
+    """列出聊天助手查询参数（仅文档说明用，实际由 Query 参数接收）"""
+    page: int = Field(1, ge=1, description="页码")
+    page_size: int = Field(30, ge=1, le=100, description="每页数量")
+    orderby: Optional[str] = Field("create_time", description="排序字段: create_time / update_time")
+    desc: Optional[bool] = Field(True, description="是否降序")
+    name: Optional[str] = Field(None, description="按名称过滤")
+    id: Optional[str] = Field(None, description="按ID过滤")
+
+
+# ==================== 会话管理 - 新增请求模型 ====================
+
+class UpdateSessionRequest(BaseModel):
+    """更新会话请求"""
+    name: str = Field(..., description="会话新名称（必填）")
+    user_id: Optional[str] = Field(None, description="用户自定义ID")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "更新后的会话名称"
+            }
+        }
+
+
+class DeleteSessionsRequest(BaseModel):
+    """删除会话请求"""
+    ids: Optional[List[str]] = Field(None, description="要删除的会话ID列表")
+    delete_all: Optional[bool] = Field(False, description="是否删除该助手下所有会话")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "ids": ["session_id_1", "session_id_2"]
+            }
+        }
+
+
+# ==================== 聊天助手管理 - 新增响应模型 ====================
+
+class ListChatAssistantsResponse(BaseResponse):
+    """列出聊天助手响应"""
+    data: Optional[List[ChatAssistantInfo]] = None
+
+
+class UpdateChatAssistantResponse(BaseResponse):
+    """更新聊天助手响应（仅返回 code）"""
+    pass
+
+
+class DeleteChatAssistantsResponse(BaseResponse):
+    """删除聊天助手响应（仅返回 code）"""
+    pass
+
+
+# ==================== 会话管理 - 新增响应模型 ====================
+
+class ListSessionsResponse(BaseResponse):
+    """列出会话响应"""
+    data: Optional[List[SessionInfo]] = None
+
+
+class UpdateSessionResponse(BaseResponse):
+    """更新会话响应（仅返回 code）"""
+    pass
+
+
+class DeleteSessionsResponse(BaseResponse):
+    """删除会话响应（仅返回 code）"""
+    pass

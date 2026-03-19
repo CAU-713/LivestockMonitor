@@ -1,4 +1,5 @@
 // TypeScript types and interfaces go here
+export * from './ragflow';
 
 /**
  * @description Represents a single livestock shed
