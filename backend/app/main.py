@@ -18,9 +18,22 @@ from app.config import settings, create_db_and_tables
 from app.utils.importToEnterpriseFatteningEnvironmentDO import import_EnterpriseFatteningEnvironmentDO_from_csv
 from app.utils.importToHouseComprehensiveEnvironmentDO import import_HouseComprehensiveEnvironmentDO_from_excel
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# 添加 CORS 中间件，允许前端跨域访问
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Next.js 默认端口
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有 HTTP 方法
+    allow_headers=["*"],  # 允许所有 HTTP 头
+)
 
 
 # 在启动时创建数据库表

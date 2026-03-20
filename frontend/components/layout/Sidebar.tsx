@@ -20,6 +20,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import QueryStatsIcon from '@mui/icons-material/QueryStats'; // Icon for Data Analysis
+import ChatIcon from '@mui/icons-material/Chat'; // Icon for AI/RAGFlow
 
 const DRAWER_WIDTH = 240;
 
@@ -130,12 +131,13 @@ const Sidebar = () => {
           </List>
         </Collapse>
 
-        <ListItemButton component={Link} href="/knowledge">
+        <ListItemButton component={Link} href="/ragflow">
           <ListItemIcon>
-            <DashboardIcon />
+            <ChatIcon />
           </ListItemIcon>
           <ListItemText primary="智能问答" />
         </ListItemButton>
+
       </List>
       <Divider />
       <List>

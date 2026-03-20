@@ -370,6 +370,295 @@ class RAGFlowService:
     #         logger.error(f"获取知识库信息失败: {e}")
     #         raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
 
+    """
+    RAGFlow Service 补充代码
+    """
+
+    # ==================== 聊天助手管理 ====================
+
+    def update_chat_assistant(
+            self,
+            chat_id: str,
+            name: str,
+            dataset_ids: Optional[List[str]] = None,
+            avatar: Optional[str] = None,
+            llm: Optional[Dict[str, Any]] = None,
+            prompt: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        更新聊天助手配置
+
+        Args:
+            chat_id: 聊天助手ID
+            name: 助手名称（必填）
+            dataset_ids: 关联的知识库ID列表
+            avatar: Base64编码的头像
+            llm: LLM配置
+            prompt: 提示配置
+
+        Returns:
+            包含 {"code": 0} 的字典
+
+        Raises:
+            RAGFlowServiceError: 更新失败时抛出
+        """
+        logger.info(f"开始更新聊天助手: chat_id={chat_id}, name={name}")
+
+        url = f"{self.base_url}/api/v1/chats/{chat_id}"
+        payload: Dict[str, Any] = {"name": name}
+
+        if dataset_ids is not None:
+            payload["dataset_ids"] = dataset_ids
+        if avatar is not None:
+            payload["avatar"] = avatar
+        if llm is not None:
+            payload["llm"] = llm
+        if prompt is not None:
+            payload["prompt"] = prompt
+
+        try:
+            response = requests.put(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info(f"聊天助手更新成功: chat_id={chat_id}")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"更新聊天助手网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def delete_chat_assistants(
+            self,
+            ids: Optional[List[str]] = None,
+            delete_all: bool = False
+    ) -> Dict[str, Any]:
+        """
+        删除聊天助手
+
+        Args:
+            ids: 要删除的助手ID列表；为 None / 空列表时配合 delete_all 使用
+            delete_all: 是否删除当前用户所有助手（ids 为空时生效）
+
+        Returns:
+            包含 {"code": 0} 的字典
+
+        Raises:
+            RAGFlowServiceError: 删除失败时抛出
+        """
+        logger.info(f"开始删除聊天助手: ids={ids}, delete_all={delete_all}")
+
+        url = f"{self.base_url}/api/v1/chats"
+        payload: Dict[str, Any] = {}
+
+        if ids:
+            payload["ids"] = ids
+            logger.info(f"删除指定助手: {len(ids)} 个")
+        elif delete_all:
+            payload["delete_all"] = True
+            logger.warning("删除当前用户所有聊天助手")
+        else:
+            # ids 为空且 delete_all=False，根据文档不会删除任何助手
+            payload["ids"] = []
+
+        try:
+            response = requests.delete(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info("聊天助手删除成功")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"删除聊天助手网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def list_chat_assistants(
+            self,
+            page: int = 1,
+            page_size: int = 30,
+            orderby: str = "create_time",
+            desc: bool = True,
+            name: Optional[str] = None,
+            chat_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        列出聊天助手
+
+        Args:
+            page: 页码（默认1）
+            page_size: 每页数量（默认30）
+            orderby: 排序字段，可选 "create_time" / "update_time"
+            desc: 是否降序（默认True）
+            name: 按助手名称过滤
+            chat_id: 按助手ID过滤
+
+        Returns:
+            包含助手列表的字典
+
+        Raises:
+            RAGFlowServiceError: 查询失败时抛出
+        """
+        logger.info(f"列出聊天助手: page={page}, page_size={page_size}")
+
+        url = f"{self.base_url}/api/v1/chats"
+        params: Dict[str, Any] = {
+            "page": page,
+            "page_size": page_size,
+            "orderby": orderby,
+            "desc": str(desc).lower()
+        }
+
+        if name is not None:
+            params["name"] = name
+        if chat_id is not None:
+            params["id"] = chat_id
+
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            result = self._handle_response(response)
+            data_list = result.get("data", [])
+            logger.info(f"获取到 {len(data_list)} 个聊天助手")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"列出聊天助手网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    # ==================== 会话管理 ====================
+
+    def update_session(
+            self,
+            chat_id: str,
+            session_id: str,
+            name: str,
+            user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        更新聊天助手的会话
+
+        Args:
+            chat_id: 聊天助手ID
+            session_id: 会话ID
+            name: 会话新名称（必填）
+            user_id: 用户自定义ID
+
+        Returns:
+            包含 {"code": 0} 的字典
+
+        Raises:
+            RAGFlowServiceError: 更新失败时抛出
+        """
+        logger.info(f"开始更新会话: chat_id={chat_id}, session_id={session_id}, name={name}")
+
+        url = f"{self.base_url}/api/v1/chats/{chat_id}/sessions/{session_id}"
+        payload: Dict[str, Any] = {"name": name}
+
+        if user_id is not None:
+            payload["user_id"] = user_id
+
+        try:
+            response = requests.put(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info(f"会话更新成功: session_id={session_id}")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"更新会话网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def list_sessions(
+            self,
+            chat_id: str,
+            page: int = 1,
+            page_size: int = 30,
+            orderby: str = "create_time",
+            desc: bool = True,
+            name: Optional[str] = None,
+            session_id: Optional[str] = None,
+            user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        列出指定聊天助手的所有会话
+
+        Args:
+            chat_id: 聊天助手ID
+            page: 页码（默认1）
+            page_size: 每页数量（默认30）
+            orderby: 排序字段，可选 "create_time" / "update_time"
+            desc: 是否降序（默认True）
+            name: 按会话名称过滤
+            session_id: 按会话ID过滤
+            user_id: 按用户自定义ID过滤
+
+        Returns:
+            包含会话列表的字典
+
+        Raises:
+            RAGFlowServiceError: 查询失败时抛出
+        """
+        logger.info(f"列出会话: chat_id={chat_id}, page={page}, page_size={page_size}")
+
+        url = f"{self.base_url}/api/v1/chats/{chat_id}/sessions"
+        params: Dict[str, Any] = {
+            "page": page,
+            "page_size": page_size,
+            "orderby": orderby,
+            "desc": str(desc).lower()
+        }
+
+        if name is not None:
+            params["name"] = name
+        if session_id is not None:
+            params["id"] = session_id
+        if user_id is not None:
+            params["user_id"] = user_id
+
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            result = self._handle_response(response)
+            data_list = result.get("data", [])
+            logger.info(f"获取到 {len(data_list)} 个会话")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"列出会话网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
+    def delete_sessions(
+            self,
+            chat_id: str,
+            ids: Optional[List[str]] = None,
+            delete_all: bool = False
+    ) -> Dict[str, Any]:
+        """
+        删除指定聊天助手的会话
+
+        Args:
+            chat_id: 聊天助手ID
+            ids: 要删除的会话ID列表；为 None / 空列表时配合 delete_all 使用
+            delete_all: 是否删除该助手下所有会话（ids 为空时生效）
+
+        Returns:
+            包含 {"code": 0} 的字典
+
+        Raises:
+            RAGFlowServiceError: 删除失败时抛出
+        """
+        logger.info(f"开始删除会话: chat_id={chat_id}, ids={ids}, delete_all={delete_all}")
+
+        url = f"{self.base_url}/api/v1/chats/{chat_id}/sessions"
+        payload: Dict[str, Any] = {}
+
+        if ids:
+            payload["ids"] = ids
+            logger.info(f"删除指定会话: {len(ids)} 个")
+        elif delete_all:
+            payload["delete_all"] = True
+            logger.warning(f"删除助手 {chat_id} 下所有会话")
+        else:
+            payload["ids"] = []
+
+        try:
+            response = requests.delete(url, headers=self.headers, json=payload)
+            result = self._handle_response(response)
+            logger.info("会话删除成功")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"删除会话网络请求失败: {e}")
+            raise RAGFlowServiceError(f"网络请求失败: {str(e)}")
+
     def list_datasets(self, page: int = 1, page_size: int = 10) -> Dict[str, Any]:
         """
         列出所有知识库（扩展功能）

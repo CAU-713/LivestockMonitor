@@ -16,7 +16,13 @@ from app.schemas.ragflowDTO import (
     DeleteDocumentsRequest, DeleteDocumentsResponse,
     CreateChatAssistantRequest, CreateChatAssistantResponse,
     CreateSessionRequest, CreateSessionResponse,
-    UploadDocumentsResponse, ErrorResponse, ChatCompletionRequest
+    UploadDocumentsResponse, ErrorResponse, ChatCompletionRequest,
+    UpdateChatAssistantRequest, UpdateChatAssistantResponse,
+    DeleteChatAssistantsRequest, DeleteChatAssistantsResponse,
+    ListChatAssistantsResponse,
+    UpdateSessionRequest, UpdateSessionResponse,
+    DeleteSessionsRequest, DeleteSessionsResponse,
+    ListSessionsResponse,
 )
 from app.services.ragflow import RAGFlowService, RAGFlowServiceError
 
@@ -111,29 +117,42 @@ async def upload_documents(
     """
     上传文档到知识库
 
-    - **dataset_id**: 知识库ID（路径参数）
-    - **files**: 要上传的文件列表
+    修复：临时文件以原始文件名命名，确保 RAGFlow 存储正确的文档名称。
     """
-    temp_files = []
+    temp_file_paths = []
 
     try:
         logger.info(f"接收到上传文档请求: 知识库={dataset_id}, 文件数={len(files)}")
 
-        # 保存上传的文件到临时目录
         file_paths = []
         for upload_file in files:
-            # 创建临时文件
-            suffix = os.path.splitext(upload_file.filename)[1]
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-            temp_files.append(temp_file.name)
+            # ✅ 修复：使用原始文件名，而不是随机的 tmpXXXXX 名称
+            original_filename = upload_file.filename or "unknown_file"
 
-            # 写入内容
+            # 清理文件名中的路径分隔符（防止路径注入）
+            safe_filename = os.path.basename(original_filename)
+
+            # 在系统临时目录下创建以原始文件名命名的临时文件
+            temp_dir = tempfile.gettempdir()
+            temp_file_path = os.path.join(temp_dir, safe_filename)
+
+            # 若同名文件已存在，加随机前缀避免冲突
+            if os.path.exists(temp_file_path):
+                name, ext = os.path.splitext(safe_filename)
+                import uuid
+                temp_file_path = os.path.join(
+                    temp_dir,
+                    f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+                )
+
+            # 写入文件内容
             content = await upload_file.read()
-            temp_file.write(content)
-            temp_file.close()
+            with open(temp_file_path, 'wb') as f:
+                f.write(content)
 
-            file_paths.append(temp_file.name)
-            logger.debug(f"文件已保存到临时路径: {temp_file.name}")
+            temp_file_paths.append(temp_file_path)
+            logger.debug(f"文件已保存到临时路径: {temp_file_path} (原始名: {safe_filename})")
+            file_paths.append(temp_file_path)
 
         # 调用服务层上传
         result = service.upload_documents(
@@ -156,14 +175,14 @@ async def upload_documents(
             detail=f"服务器内部错误: {str(e)}"
         )
     finally:
-        # 清理临时文件
-        for temp_file in temp_files:
+        # 清理所有临时文件
+        for temp_path in temp_file_paths:
             try:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
-                    logger.debug(f"临时文件已删除: {temp_file}")
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                    logger.debug(f"临时文件已删除: {temp_path}")
             except Exception as e:
-                logger.warning(f"删除临时文件失败: {temp_file}, 错误: {e}")
+                logger.warning(f"删除临时文件失败: {temp_path}, 错误: {e}")
 
 
 @router.post(
@@ -673,6 +692,305 @@ async def chat_with_assistant(
         )
     except Exception as e:
         logger.exception("对话时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+"""
+RAGFlow Router 补充代码
+"""
+
+# ==================== 聊天助手管理 ====================
+
+@router.put(
+    "/chat-assistants/{chat_id}",
+    response_model=UpdateChatAssistantResponse,
+    summary="更新聊天助手",
+    description="更新指定聊天助手的配置信息"
+)
+async def update_chat_assistant(
+        chat_id: str,
+        request: UpdateChatAssistantRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    更新聊天助手
+
+    - **chat_id**: 聊天助手ID（路径参数）
+    - **name**: 助手新名称（必填）
+    - **dataset_ids**: 关联的知识库ID列表
+    - **llm**: LLM配置
+    - **prompt**: 提示配置
+    """
+    try:
+        logger.info(f"接收到更新聊天助手请求: chat_id={chat_id}, name={request.name}")
+
+        llm_config = request.llm.dict(exclude_none=True) if request.llm else None
+        prompt_config = request.prompt.dict(exclude_none=True) if request.prompt else None
+
+        result = service.update_chat_assistant(
+            chat_id=chat_id,
+            name=request.name,
+            dataset_ids=request.dataset_ids,
+            avatar=request.avatar,
+            llm=llm_config,
+            prompt=prompt_config
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"更新聊天助手失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("更新聊天助手时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.delete(
+    "/chat-assistants",
+    response_model=DeleteChatAssistantsResponse,
+    summary="删除聊天助手",
+    description="批量删除聊天助手，或删除当前用户所有聊天助手"
+)
+async def delete_chat_assistants(
+        request: DeleteChatAssistantsRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    删除聊天助手
+
+    - **ids**: 要删除的助手ID列表（与 delete_all 二选一）
+    - **delete_all**: 是否删除所有助手（ids 为空时生效）
+    """
+    try:
+        logger.info(f"接收到删除聊天助手请求: ids={request.ids}, delete_all={request.delete_all}")
+
+        result = service.delete_chat_assistants(
+            ids=request.ids,
+            delete_all=request.delete_all or False
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"删除聊天助手失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("删除聊天助手时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.get(
+    "/chat-assistants",
+    response_model=ListChatAssistantsResponse,
+    summary="列出聊天助手",
+    description="分页获取聊天助手列表，支持按名称或ID过滤"
+)
+async def list_chat_assistants(
+        page: int = 1,
+        page_size: int = 30,
+        orderby: str = "create_time",
+        desc: bool = True,
+        name: Optional[str] = None,
+        chat_id: Optional[str] = None,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    列出聊天助手
+
+    - **page**: 页码（默认1）
+    - **page_size**: 每页数量（默认30）
+    - **orderby**: 排序字段，可选 create_time / update_time
+    - **desc**: 是否降序（默认True）
+    - **name**: 按助手名称过滤（可选）
+    - **chat_id**: 按助手ID过滤（可选）
+    """
+    try:
+        logger.info(f"接收到列出聊天助手请求: page={page}, page_size={page_size}")
+
+        result = service.list_chat_assistants(
+            page=page,
+            page_size=page_size,
+            orderby=orderby,
+            desc=desc,
+            name=name,
+            chat_id=chat_id
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"列出聊天助手失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("列出聊天助手时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+# ==================== 会话管理 ====================
+
+@router.put(
+    "/chat-assistants/{chat_id}/sessions/{session_id}",
+    response_model=UpdateSessionResponse,
+    summary="更新会话",
+    description="更新指定聊天助手的会话名称"
+)
+async def update_session(
+        chat_id: str,
+        session_id: str,
+        request: UpdateSessionRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    更新会话
+
+    - **chat_id**: 聊天助手ID（路径参数）
+    - **session_id**: 会话ID（路径参数）
+    - **name**: 会话新名称（必填）
+    - **user_id**: 用户自定义ID（可选）
+    """
+    try:
+        logger.info(f"接收到更新会话请求: chat_id={chat_id}, session_id={session_id}")
+
+        result = service.update_session(
+            chat_id=chat_id,
+            session_id=session_id,
+            name=request.name,
+            user_id=request.user_id
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"更新会话失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("更新会话时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.get(
+    "/chat-assistants/{chat_id}/sessions",
+    response_model=ListSessionsResponse,
+    summary="列出会话",
+    description="分页获取指定聊天助手的会话列表，支持按名称、ID或用户ID过滤"
+)
+async def list_sessions(
+        chat_id: str,
+        page: int = 1,
+        page_size: int = 30,
+        orderby: str = "create_time",
+        desc: bool = True,
+        name: Optional[str] = None,
+        session_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    列出会话
+
+    - **chat_id**: 聊天助手ID（路径参数）
+    - **page**: 页码（默认1）
+    - **page_size**: 每页数量（默认30）
+    - **orderby**: 排序字段，可选 create_time / update_time
+    - **desc**: 是否降序（默认True）
+    - **name**: 按会话名称过滤（可选）
+    - **session_id**: 按会话ID过滤（可选）
+    - **user_id**: 按用户自定义ID过滤（可选）
+    """
+    try:
+        logger.info(f"接收到列出会话请求: chat_id={chat_id}, page={page}, page_size={page_size}")
+
+        result = service.list_sessions(
+            chat_id=chat_id,
+            page=page,
+            page_size=page_size,
+            orderby=orderby,
+            desc=desc,
+            name=name,
+            session_id=session_id,
+            user_id=user_id
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"列出会话失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("列出会话时发生未知错误")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"服务器内部错误: {str(e)}"
+        )
+
+
+@router.delete(
+    "/chat-assistants/{chat_id}/sessions",
+    response_model=DeleteSessionsResponse,
+    summary="删除会话",
+    description="批量删除指定聊天助手的会话，或删除该助手下所有会话"
+)
+async def delete_sessions(
+        chat_id: str,
+        request: DeleteSessionsRequest,
+        service: RAGFlowService = Depends(get_ragflow_service)
+):
+    """
+    删除会话
+
+    - **chat_id**: 聊天助手ID（路径参数）
+    - **ids**: 要删除的会话ID列表（与 delete_all 二选一）
+    - **delete_all**: 是否删除该助手下所有会话（ids 为空时生效）
+    """
+    try:
+        logger.info(f"接收到删除会话请求: chat_id={chat_id}, ids={request.ids}, delete_all={request.delete_all}")
+
+        result = service.delete_sessions(
+            chat_id=chat_id,
+            ids=request.ids,
+            delete_all=request.delete_all or False
+        )
+
+        return result
+
+    except RAGFlowServiceError as e:
+        logger.error(f"删除会话失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception("删除会话时发生未知错误")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"服务器内部错误: {str(e)}"
