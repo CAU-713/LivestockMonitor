@@ -31,7 +31,11 @@ export default function HistoryVideoPage() {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth='lg'>
         <Stack spacing={3.5}>
-          <Paper elevation={3} sx={{ p: 2.5, borderRadius: 3 }}>
+          <Box sx={{ borderLeft: '4px solid #2E7D32', pl: 1.5, py: 0.5 }}>
+            <Typography variant="h5" fontWeight={700}>历史视频回放</Typography>
+            <Typography variant="body2" color="text.secondary">查看历史行为录像与摄像头回放</Typography>
+          </Box>
+          <Paper elevation={3} sx={{ p: 2.5, borderRadius: 3, borderTop: '4px solid #2E7D32' }}>
             <Stack spacing={1.5}>
               <Stack
                 direction={{ xs: 'column', md: 'row' }}

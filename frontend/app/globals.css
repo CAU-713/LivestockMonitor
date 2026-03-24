@@ -1,0 +1,46 @@
+/* 全局基础样式 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f8e9;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #81c784;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4caf50;
+}
+
+/* 去除链接默认下划线 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 全局过渡效果 */
+.MuiPaper-root {
+  transition: box-shadow 0.2s ease !important;
+}
+
+/* 确保页面背景色 */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f1f8e9;
+}

@@ -39,15 +39,15 @@ type Granularity = 'moment' | 'hour' | 'day';
 type MergeMode = 'none' | 'type' | 'shed';
 
 const lineColors = [
-  '#8884d8',
-  '#82ca9d',
-  '#ffc658',
-  '#ff7300',
-  '#387908',
-  '#0088FE',
-  '#00C49F',
-  '#FFBB28',
-  '#FF8042',
+  '#2E7D32',
+  '#1565C0',
+  '#F57C00',
+  '#6A1B9A',
+  '#00695C',
+  '#E65100',
+  '#880E4F',
+  '#F9A825',
+  '#4E342E',
 ];
 const getColor = (index: number) => lineColors[index % lineColors.length];
 
@@ -469,8 +469,14 @@ const HistoricalEnvironmentalDataPage = () => {
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Box>
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant='h6' gutterBottom>
+        <Paper
+          sx={{
+            p: 2,
+            mb: 3,
+            borderTop: '4px solid #2E7D32',
+          }}
+        >
+          <Typography variant='h6' gutterBottom fontWeight={700}>
             筛选条件
           </Typography>
           <Box
@@ -524,6 +530,13 @@ const HistoricalEnvironmentalDataPage = () => {
                 value={granularity}
                 exclusive
                 onChange={handleGranularityChange}
+                sx={{
+                  '& .MuiToggleButton-root.Mui-selected': {
+                    backgroundColor: '#2E7D32',
+                    color: '#ffffff',
+                    '&:hover': { backgroundColor: '#1B5E20' },
+                  },
+                }}
               >
                 <ToggleButton value='moment'>时刻</ToggleButton>
                 <ToggleButton value='hour'>小时</ToggleButton>
@@ -540,6 +553,13 @@ const HistoricalEnvironmentalDataPage = () => {
                   onChange={handleMergeModeChange}
                   size='small'
                   aria-label='merge mode'
+                  sx={{
+                    '& .MuiToggleButton-root.Mui-selected': {
+                      backgroundColor: '#2E7D32',
+                      color: '#ffffff',
+                      '&:hover': { backgroundColor: '#1B5E20' },
+                    },
+                  }}
                 >
                   <ToggleButton value='none'>不合并</ToggleButton>
                   <ToggleButton value='type'>按类型</ToggleButton>

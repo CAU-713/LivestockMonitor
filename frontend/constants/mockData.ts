@@ -461,7 +461,7 @@ export const mockHourlyChartData: MergedChartData[] = [
     title: 'A区-东侧温度计',
     sensorType: 'Temperature',
     unit: '°C',
-    lines: [{ dataKey: 'value', name: 'A区-东侧温度计', color: '#8884d8' }],
+    lines: [{ dataKey: 'value', name: 'A区-东侧温度计', color: '#2E7D32' }],
     data: generateHourlyData(
       24,
       (i) => 22 + Math.sin(i / 4) * 2 + Math.random()
@@ -471,7 +471,7 @@ export const mockHourlyChartData: MergedChartData[] = [
     title: 'A区-西侧温度计',
     sensorType: 'Temperature',
     unit: '°C',
-    lines: [{ dataKey: 'value', name: 'A区-西侧温度计', color: '#82ca9d' }],
+    lines: [{ dataKey: 'value', name: 'A区-西侧温度计', color: '#388E3C' }],
     data: generateHourlyData(
       24,
       (i) => 22.5 + Math.cos(i / 4) * 1.5 + Math.random()
@@ -481,7 +481,7 @@ export const mockHourlyChartData: MergedChartData[] = [
     title: 'A区-中央湿度计',
     sensorType: 'Humidity',
     unit: '%',
-    lines: [{ dataKey: 'value', name: 'A区-中央湿度计', color: '#ffc658' }],
+    lines: [{ dataKey: 'value', name: 'A区-中央湿度计', color: '#1565C0' }],
     data: generateHourlyData(
       24,
       (i) => 60 + Math.cos(i / 3) * 5 + Math.random() * 2
@@ -491,7 +491,7 @@ export const mockHourlyChartData: MergedChartData[] = [
     title: 'A区-氨气检测仪',
     sensorType: 'Ammonia',
     unit: 'ppm',
-    lines: [{ dataKey: 'value', name: 'A区-氨气检测仪', color: '#ff7300' }],
+    lines: [{ dataKey: 'value', name: 'A区-氨气检测仪', color: '#F57C00' }],
     data: generateHourlyData(
       24,
       (i) => 10 + Math.sin(i / 5) * 3 + Math.random()
@@ -501,7 +501,7 @@ export const mockHourlyChartData: MergedChartData[] = [
     title: 'A区-二氧化碳检测仪',
     sensorType: 'CO2',
     unit: 'ppm',
-    lines: [{ dataKey: 'value', name: 'A区-二氧化碳检测仪', color: '#387908' }],
+    lines: [{ dataKey: 'value', name: 'A区-二氧化碳检测仪', color: '#6A1B9A' }],
     data: generateHourlyData(
       24,
       (i) => 800 + Math.sin(i / 6) * 100 + Math.random() * 20
@@ -529,7 +529,7 @@ export const mockDailyChartData: MergedChartData[] = [
     title: 'A区-东侧温度计',
     sensorType: 'Temperature',
     unit: '°C',
-    lines: [{ dataKey: 'value', name: 'A区-东侧温度计', color: '#8884d8' }],
+    lines: [{ dataKey: 'value', name: 'A区-东侧温度计', color: '#2E7D32' }],
     data: generateDailyData(
       30,
       (i) => 20 + Math.sin(i / 7) * 3 + Math.random() * 2
@@ -539,7 +539,7 @@ export const mockDailyChartData: MergedChartData[] = [
     title: 'A区-西侧温度计',
     sensorType: 'Temperature',
     unit: '°C',
-    lines: [{ dataKey: 'value', name: 'A区-西侧温度计', color: '#82ca9d' }],
+    lines: [{ dataKey: 'value', name: 'A区-西侧温度计', color: '#388E3C' }],
     data: generateDailyData(
       30,
       (i) => 21 + Math.cos(i / 7) * 2.5 + Math.random() * 2
@@ -549,7 +549,7 @@ export const mockDailyChartData: MergedChartData[] = [
     title: 'A区-中央湿度计',
     sensorType: 'Humidity',
     unit: '%',
-    lines: [{ dataKey: 'value', name: 'A区-中央湿度计', color: '#ffc658' }],
+    lines: [{ dataKey: 'value', name: 'A区-中央湿度计', color: '#1565C0' }],
     data: generateDailyData(
       30,
       (i) => 55 + Math.cos(i / 5) * 8 + Math.random() * 4
@@ -559,7 +559,7 @@ export const mockDailyChartData: MergedChartData[] = [
     title: 'A区-氨气检测仪',
     sensorType: 'Ammonia',
     unit: 'ppm',
-    lines: [{ dataKey: 'value', name: 'A区-氨气检测仪', color: '#ff7300' }],
+    lines: [{ dataKey: 'value', name: 'A区-氨气检测仪', color: '#F57C00' }],
     data: generateDailyData(
       30,
       (i) => 12 + Math.sin(i / 10) * 4 + Math.random() * 2
@@ -569,7 +569,7 @@ export const mockDailyChartData: MergedChartData[] = [
     title: 'A区-二氧化碳检测仪',
     sensorType: 'CO2',
     unit: 'ppm',
-    lines: [{ dataKey: 'value', name: 'A区-二氧化碳检测仪', color: '#387908' }],
+    lines: [{ dataKey: 'value', name: 'A区-二氧化碳检测仪', color: '#6A1B9A' }],
     data: generateDailyData(
       30,
       (i) => 850 + Math.cos(i / 8) * 150 + Math.random() * 50
@@ -664,8 +664,8 @@ export const mockOverallTemperatureTrend: MergedChartData = {
   sensorType: 'Temperature',
   unit: '°C',
   lines: [
-    { dataKey: 'value', name: '平均值', color: '#ff7300' },
-    { dataKey: 'range', name: '范围', color: '#ff7300' },
+    { dataKey: 'value', name: '平均值', color: '#2E7D32' },
+    { dataKey: 'range', name: '范围', color: '#81C784' },
   ],
   data: generateOverallTrend(24, (i) => {
     const avg = 23 + Math.sin(i / 5) * 2 + Math.random();
@@ -678,8 +678,8 @@ export const mockOverallHumidityTrend: MergedChartData = {
   sensorType: 'Humidity',
   unit: '%',
   lines: [
-    { dataKey: 'value', name: '平均值', color: '#387908' },
-    { dataKey: 'range', name: '范围', color: '#387908' },
+    { dataKey: 'value', name: '平均值', color: '#1565C0' },
+    { dataKey: 'range', name: '范围', color: '#90CAF9' },
   ],
   data: generateOverallTrend(24, (i) => {
     const avg = 60 + Math.cos(i / 4) * 5 + Math.random() * 2;

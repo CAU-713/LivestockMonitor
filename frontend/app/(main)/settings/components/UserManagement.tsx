@@ -137,12 +137,9 @@ export default function UserManagement() {
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
         <Button
           variant="contained"
+          color="primary"
           startIcon={<AddIcon />}
           onClick={() => handleOpenDialog()}
-          sx={{
-            backgroundColor: '#1976d2',
-            '&:hover': { backgroundColor: '#1565c0' },
-          }}
         >
           添加用户
         </Button>
@@ -151,7 +148,7 @@ export default function UserManagement() {
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableRow sx={{ backgroundColor: 'rgba(46,125,50,0.08)' }}>
               <TableCell sx={{ fontWeight: 600 }}>用户名</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>邮箱</TableCell>
               <TableCell sx={{ fontWeight: 600 }}>角色</TableCell>
@@ -165,7 +162,7 @@ export default function UserManagement() {
               <TableRow
                 key={user.id}
                 sx={{
-                  '&:hover': { backgroundColor: '#fafafa' },
+                  '&:hover': { backgroundColor: 'rgba(46,125,50,0.04)' },
                   '&:last-child td, &:last-child th': { border: 0 },
                 }}
               >
@@ -193,7 +190,7 @@ export default function UserManagement() {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(user)}
-                      sx={{ color: '#1976d2' }}
+                      sx={{ color: 'primary.main' }}
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
@@ -267,10 +264,7 @@ export default function UserManagement() {
           <Button
             onClick={handleSave}
             variant="contained"
-            sx={{
-              backgroundColor: '#1976d2',
-              '&:hover': { backgroundColor: '#1565c0' },
-            }}
+            color="primary"
           >
             保存
           </Button>

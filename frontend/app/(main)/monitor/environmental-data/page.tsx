@@ -38,9 +38,21 @@ const EnvironmentalDataPage = () => {
 
   return (
     <Box>
-      <Typography variant='h4' sx={{ mb: 2 }}>
-        环境数据监控
-      </Typography>
+      <Box
+        sx={{
+          mb: 2,
+          borderLeft: '4px solid #2E7D32',
+          pl: 1.5,
+          py: 0.5,
+        }}
+      >
+        <Typography variant="h5" fontWeight={700}>
+          环境数据监控
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          查看所有畜舍传感器实时读数
+        </Typography>
+      </Box>
 
       <EnvironmentalDataFilter
         sheds={mockSheds}

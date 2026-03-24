@@ -132,7 +132,7 @@ export default function DeviceManagement() {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableRow sx={{ backgroundColor: 'rgba(46,125,50,0.08)' }}>
               {columns.map((col) => (
                 <TableCell key={col} sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
                   {getColumnLabel(col)}
@@ -143,7 +143,7 @@ export default function DeviceManagement() {
           </TableHead>
           <TableBody>
             {list.map((item) => (
-              <TableRow key={item.id} sx={{ '&:hover': { backgroundColor: '#fafafa' } }}>
+              <TableRow key={item.id} sx={{ '&:hover': { backgroundColor: 'rgba(46,125,50,0.04)' } }}>
                 {columns.map((col) => (
                   <TableCell key={col} sx={{ fontSize: '0.875rem' }}>
                     {item[col as keyof typeof item]}
@@ -154,7 +154,7 @@ export default function DeviceManagement() {
                     <IconButton
                       size="small"
                       onClick={() => handleOpenDialog(type, item)}
-                      sx={{ color: '#1976d2' }}
+                      sx={{ color: 'primary.main' }}
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
@@ -276,10 +276,7 @@ export default function DeviceManagement() {
           <Button
             onClick={handleSave}
             variant="contained"
-            sx={{
-              backgroundColor: '#1976d2',
-              '&:hover': { backgroundColor: '#1565c0' },
-            }}
+            color="primary"
           >
             保存
           </Button>

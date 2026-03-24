@@ -1,7 +1,7 @@
 // app/(main)/monitor/behavior/page.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Container, Paper, Stack, Typography } from '@mui/material';
+import { Box, Container, Paper, Stack, Typography } from '@mui/material';
 
 import { mockSheds, mockCameras } from '../../../../constants/mockData';
 
@@ -50,6 +50,12 @@ const BehaviorPage = () => {
       <Stack spacing={3.5}>
         <Paper elevation={3} sx={{ p: 2.5, borderRadius: 3 }}>
           <Stack spacing={1.5}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.5}>
+              <Box sx={{ borderLeft: '4px solid #2E7D32', pl: 1.5 }}>
+                <Typography variant="h6" fontWeight={700}>实时视频监控</Typography>
+                <Typography variant="body2" color="text.secondary">查看各畜舍摄像头实时画面与行为分析</Typography>
+              </Box>
+            </Stack>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               alignItems={{ md: 'center' }}
