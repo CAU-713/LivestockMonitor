@@ -7,29 +7,28 @@ import Header from '../../components/layout/Header';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Box sx={{ display: 'flex' }}>
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
       <Sidebar />
 
-      {/* Main Content Area */}
       <Box
-        component="main"
+        component='main'
         sx={{
-          flexGrow: 1, // This will make the main content area take up the remaining space
-          p: 3,
-          backgroundColor: (theme) => theme.palette.background.default,
-          minHeight: '100vh'
+          flexGrow: 1,
+          px: { xs: 2, md: 3 },
+          pb: 3,
+          backgroundColor: 'background.default',
         }}
       >
-        {/* Header */}
         <Header />
-
-        {/* Toolbar spacer to push content down */}
         <Toolbar />
 
-        {/* Page Content */}
-        <Box sx={{ mt: 2 }}>
-            {children}
+        <Box
+          sx={{
+            mt: 2,
+            borderRadius: 3,
+          }}
+        >
+          {children}
         </Box>
       </Box>
     </Box>
