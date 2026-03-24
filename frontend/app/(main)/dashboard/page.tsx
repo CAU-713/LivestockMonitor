@@ -19,7 +19,6 @@ import Link from 'next/link';
 import FenceIcon from '@mui/icons-material/Fence';
 import DevicesIcon from '@mui/icons-material/Devices';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
-import AirIcon from '@mui/icons-material/Air';
 
 // Import Components and Data
 import KPICard from './components/KPICard';
@@ -90,7 +89,29 @@ const DashboardPage = () => {
   ];
 
   return (
-    <Grid container spacing={3}>
+    <Stack spacing={2.5}>
+      <Paper elevation={0} sx={{ p: { xs: 2, md: 2.5 }, borderRadius: 3, backgroundColor: 'background.paper' }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          justifyContent='space-between'
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+          spacing={1.5}
+        >
+          <Box>
+            <Typography variant='h5' fontWeight={700}>
+              课题组牧场运行总览
+            </Typography>
+            <Typography variant='body2' color='text.secondary' sx={{ mt: 0.5 }}>
+              面向内部科研与合作展示的统一监测看板（数据每 5 分钟更新）
+            </Typography>
+          </Box>
+          <Button variant='outlined' size='small'>
+            切换主题色（预留）
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Grid container spacing={3}>
       {/* Row 1: KPIs */}
       {kpiData.map((kpi) => (
         <Grid item xs={12} sm={6} md={3} key={kpi.id}>
@@ -393,6 +414,7 @@ const DashboardPage = () => {
         );
       })}
     </Grid>
+    </Stack>
   );
 };
 

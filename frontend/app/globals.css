@@ -1,0 +1,62 @@
+:root {
+  --color-primary: #285ea8;
+  --color-primary-soft: #ebf3ff;
+  --color-primary-strong: #1d4d8f;
+  --color-secondary: #0f766e;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+
+  --color-bg: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-border: #e2e8f0;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748b;
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+}
+
+/* Theme ready extension: switch these variable values under a different class */
+:root.theme-forest {
+  --color-primary: #2e6a57;
+  --color-primary-soft: #e8f6f0;
+  --color-primary-strong: #1f4d40;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-feature-settings: 'tnum' 1;
+}
+
+.page-shell {
+  border-radius: var(--radius-card);
+  padding: 16px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.page-subtitle {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}

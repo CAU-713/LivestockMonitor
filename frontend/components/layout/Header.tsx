@@ -4,54 +4,58 @@ import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import Badge from '@mui/material/Badge';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import { usePathname } from 'next/navigation';
 
 const DRAWER_WIDTH = 240;
 
-// Function to capitalize the first letter of a string
-const capitalize = (s: string) => {
-    if (typeof s !== 'string' || s.length === 0) return '';
-    return s.charAt(0).toUpperCase() + s.slice(1);
-}
+const titleMap: Record<string, string> = {
+  dashboard: '科研总览',
+  monitor: '实时监测',
+  'environmental-data': '环境数据',
+  behavior: '行为视频',
+  history: '历史数据',
+  'video-data': '历史视频',
+  'data-analysis': '数据分析',
+  ragflow: '智能问答',
+  settings: '系统设置',
+};
 
 const Header = () => {
   const pathname = usePathname();
-  // Get the page name from the path, e.g., "/dashboard" -> "Dashboard"
-  const pageTitle = capitalize(pathname.split('/').pop() || 'Dashboard');
+  const currentPath = pathname.split('/').filter(Boolean).pop() || 'dashboard';
+  const pageTitle = titleMap[currentPath] || '科研平台';
 
   return (
     <AppBar
-      position="fixed"
+      position='fixed'
       sx={{
         width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
         ml: { sm: `${DRAWER_WIDTH}px` },
-        backgroundColor: 'white',
-        color: 'black',
-        boxShadow: '0 1px 4px 0 rgba(0,0,0,0.1)'
+        backgroundColor: 'background.paper',
+        color: 'text.primary',
       }}
     >
-      <Toolbar>
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          edge="start"
-          sx={{ mr: 2, display: { sm: 'none' } }}
-        >
-          <MenuIcon />
-        </IconButton>
-        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-          {pageTitle}
-        </Typography>
-        <IconButton color="inherit">
-          <Badge badgeContent={4} color="primary">
+      <Toolbar sx={{ minHeight: '68px !important' }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography variant='h6' noWrap component='div'>
+            {pageTitle}
+          </Typography>
+          <Typography variant='caption' color='text.secondary'>
+            Livestock Research Monitoring Platform
+          </Typography>
+        </Box>
+        <Chip size='small' color='primary' variant='outlined' label='课题组内部版' sx={{ mr: 1.5 }} />
+        <IconButton color='inherit'>
+          <Badge badgeContent={4} color='primary'>
             <NotificationsIcon />
           </Badge>
         </IconButton>
-        <IconButton color="inherit">
+        <IconButton color='inherit'>
           <AccountCircle />
         </IconButton>
       </Toolbar>
