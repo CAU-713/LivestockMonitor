@@ -131,4 +131,4 @@ class AlertRuleQueryDTO(BaseModel):
     sensor_id: Optional[int] = Field(None, gt=0, description="传感器ID筛选")
     search: Optional[str] = Field(None, description="搜索关键词(规则名称)")
     page: int = Field(default=1, ge=1, description="页码")
-    page_size: int = Field(default=10, ge=1, le=100, description="每页数量")
+    page_size: int = Field(default=10, ge=1, le=10000, description="每页数量")

@@ -637,7 +637,7 @@ class DeleteChatAssistantsRequest(BaseModel):
 class ListChatAssistantsParams(BaseModel):
     """列出聊天助手查询参数（仅文档说明用，实际由 Query 参数接收）"""
     page: int = Field(1, ge=1, description="页码")
-    page_size: int = Field(30, ge=1, le=100, description="每页数量")
+    page_size: int = Field(30, ge=1, le=10000, description="每页数量")
     orderby: Optional[str] = Field("create_time", description="排序字段: create_time / update_time")
     desc: Optional[bool] = Field(True, description="是否降序")
     name: Optional[str] = Field(None, description="按名称过滤")

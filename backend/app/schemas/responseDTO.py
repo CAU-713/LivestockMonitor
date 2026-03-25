@@ -48,7 +48,7 @@ class ListResponseData(BaseModel, Generic[T]):
     items: list[T] = Field(..., description="数据列表")
     total: int = Field(..., description="总记录数")
     page: int = Field(1, ge=1, description="当前页码")
-    page_size: int = Field(10, ge=1, le=100, description="每页数量")
+    page_size: int = Field(10, ge=1, le=10000, description="每页数量")
 
     class Config:
         json_schema_extra = {

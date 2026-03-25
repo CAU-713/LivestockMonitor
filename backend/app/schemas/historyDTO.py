@@ -139,7 +139,7 @@ class VideoHistoryQueryDTO(BaseModel):
     start_time: Optional[datetime] = Field(default=None, description="开始时间")
     end_time: Optional[datetime] = Field(default=None, description="结束时间")
     page: int = Field(default=1, ge=1, description="页码")
-    page_size: int = Field(default=20, ge=1, le=100, description="每页数量")
+    page_size: int = Field(default=20, ge=1, le=10000, description="每页数量")
 
     class Config:
         json_schema_extra = {

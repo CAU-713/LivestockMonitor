@@ -65,7 +65,7 @@ class CameraQueryDTO(BaseModel):
     status: Optional[str] = Field(None, description="按状态筛选: online/offline")
     name: Optional[str] = Field(None, description="按名称模糊搜索")
     page: int = Field(default=1, ge=1, description="页码")
-    page_size: int = Field(default=10, ge=1, le=100, description="每页数量")
+    page_size: int = Field(default=10, ge=1, le=10000, description="每页数量")
 
 
 # ==================== 响应 Schema ====================
