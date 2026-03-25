@@ -17,7 +17,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   login: (name: string, password: string, roleMode: RoleMode) => Promise<void>;
-  loginAsGuest: () => void;
+  loginAsGuest: (roleMode?: RoleMode) => void;
   logout: () => void;
   isAdmin: boolean;
   isResearch: boolean;
@@ -91,15 +91,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   /**
    * 访客模式直接进入（不调用后端）
    */
-  const loginAsGuest = useCallback(() => {
-    const guestUser: AuthUser = {
+  const loginAsGuest = useCallback((roleMode: RoleMode = 'guest') => {
+    const quickUser: AuthUser = {
       id: 0,
-      name: '访客',
-      role: 1,
-      roleMode: 'guest',
+      name: roleMode === 'research' ? '科研用户' : roleMode === 'admin' ? '管理员' : '访客',
+      role: roleMode === 'admin' ? 0 : roleMode === 'research' ? 2 : 1,
+      roleMode,
     };
-    setUser(guestUser);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(guestUser));
+    setUser(quickUser);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(quickUser));
   }, []);
 
   const logout = useCallback(() => {

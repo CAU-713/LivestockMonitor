@@ -208,15 +208,34 @@ const LoginPage = () => {
               <Typography variant="caption" color="text.secondary">或者</Typography>
             </Divider>
 
-            <Button
-              fullWidth
-              variant="outlined"
-              color="primary"
-              sx={{ py: 1 }}
-              onClick={handleGuestEnter}
-            >
-              直接进入（访客模式）
-            </Button>
+            <Stack direction="row" spacing={1.5}>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="primary"
+                sx={{ py: 1, fontSize: '0.85rem' }}
+                onClick={handleGuestEnter}
+              >
+                直接进入（访客）
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                sx={{
+                  py: 1,
+                  fontSize: '0.85rem',
+                  color: '#1565C0',
+                  borderColor: '#1565C0',
+                  '&:hover': { borderColor: '#0D47A1', backgroundColor: 'rgba(21,101,192,0.06)' },
+                }}
+                onClick={() => {
+                  loginAsGuest('research');
+                  router.push('/dashboard');
+                }}
+              >
+                直接进入（科研）
+              </Button>
+            </Stack>
           </Box>
         </Paper>
       </Box>
