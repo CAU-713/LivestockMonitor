@@ -5,21 +5,17 @@ import {
   Typography,
   TextField,
   Button,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormLabel,
   Paper,
   Stack,
-  Divider,
   Alert,
+  Divider,
 } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import { useAuth, RoleMode } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 const features = [
   { icon: <MonitorHeartIcon sx={{ fontSize: 20 }} />, text: '实时环境监控，掌握牧场动态' },
@@ -33,9 +29,13 @@ const LoginPage = () => {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<RoleMode>('guest');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleGuestEnter = (roleMode: 'guest' | 'research' = 'guest') => {
+    loginAsGuest(roleMode);
+    router.push('/dashboard');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,18 +46,15 @@ const LoginPage = () => {
     setLoading(true);
     setError(null);
     try {
-      await login(username.trim(), password.trim(), role);
+      await login(username.trim(), password.trim());
+      // 登录成功后统一跳转 dashboard，Sidebar 会根据 roleMode 控制菜单可见性
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || '登录失败，请检查用户名和密码');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '登录失败，请检查用户名和密码';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGuestEnter = () => {
-    loginAsGuest();
-    router.push('/dashboard');
   };
 
   return (
@@ -171,26 +168,10 @@ const LoginPage = () => {
               id="password"
               autoComplete="current-password"
               size="small"
-              sx={{ mb: 2 }}
+              sx={{ mb: 3 }}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-
-            {/* 角色选择 */}
-            <Box sx={{ mb: 3, p: 2, borderRadius: 2, background: 'rgba(46,125,50,0.05)', border: '1px solid rgba(46,125,50,0.15)' }}>
-              <FormLabel component="legend" sx={{ fontSize: '0.8rem', mb: 1, color: 'text.secondary', fontWeight: 600 }}>
-                选择登录角色
-              </FormLabel>
-              <RadioGroup
-                row
-                value={role}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRole(e.target.value as RoleMode)}
-              >
-                <FormControlLabel value="admin" control={<Radio size="small" color="primary" />} label={<Typography variant="body2">管理员</Typography>} />
-                <FormControlLabel value="research" control={<Radio size="small" color="primary" />} label={<Typography variant="body2">科研模式</Typography>} />
-                <FormControlLabel value="guest" control={<Radio size="small" color="primary" />} label={<Typography variant="body2">访客</Typography>} />
-              </RadioGroup>
-            </Box>
 
             <Button
               type="submit"
@@ -199,7 +180,7 @@ const LoginPage = () => {
               color="primary"
               size="large"
               disabled={loading}
-              sx={{ mb: 2, py: 1.2, fontSize: '1rem' }}
+              sx={{ py: 1.2, fontSize: '1rem', mb: 2 }}
             >
               {loading ? '登录中...' : '登 录'}
             </Button>
@@ -214,7 +195,7 @@ const LoginPage = () => {
                 variant="outlined"
                 color="primary"
                 sx={{ py: 1, fontSize: '0.85rem' }}
-                onClick={handleGuestEnter}
+                onClick={() => handleGuestEnter('guest')}
               >
                 直接进入（访客）
               </Button>
@@ -228,10 +209,7 @@ const LoginPage = () => {
                   borderColor: '#1565C0',
                   '&:hover': { borderColor: '#0D47A1', backgroundColor: 'rgba(21,101,192,0.06)' },
                 }}
-                onClick={() => {
-                  loginAsGuest('research');
-                  router.push('/dashboard');
-                }}
+                onClick={() => handleGuestEnter('research')}
               >
                 直接进入（科研）
               </Button>

@@ -19,7 +19,6 @@ class UserLoginDTO(SQLModel):
     """登录数据传输对象"""
     name: str = Field(description="用户名")
     password: str = Field(description="用户密码")
-    role_mode: str = Field(default="guest", description="前端登录角色模式: admin/research/guest")
 
 
 class UserLoginResponseDTO(SQLModel):
@@ -44,11 +43,15 @@ def login_user(
     session.add(user)
     session.commit()
     session.refresh(user)
+    # 根据数据库中的 role 值自动映射到前端角色模式
+    # role=0 → admin, role=1 → guest, role=2 → research
+    role_mode_map = {0: "admin", 1: "guest", 2: "research"}
+    role_mode = role_mode_map.get(user.role, "guest")
     return UserLoginResponseDTO(
         id=user.id,
         name=user.name,
         role=user.role,
-        role_mode=login_data.role_mode
+        role_mode=role_mode
     )
 
 

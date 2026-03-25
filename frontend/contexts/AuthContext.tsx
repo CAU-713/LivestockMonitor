@@ -16,7 +16,7 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (name: string, password: string, roleMode: RoleMode) => Promise<void>;
+  login: (name: string, password: string) => Promise<void>;
   loginAsGuest: (roleMode?: RoleMode) => void;
   logout: () => void;
   isAdmin: boolean;
@@ -61,11 +61,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (name: string, password: string, roleMode: RoleMode) => {
+  const login = useCallback(async (name: string, password: string) => {
     const response = await fetch('/api/users/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, password, role_mode: roleMode }),
+      body: JSON.stringify({ name, password }),
     });
 
     if (!response.ok) {
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const data = await response.json();
-    // 后端返回的 role_mode 优先使用；如果后端没有返回，则用 role 数字推导
+    // 完全由后端返回的 role_mode 决定；若后端未返回则用 role 数字推导
     const finalRoleMode: RoleMode = data.role_mode || mapRoleToMode(data.role);
 
     const authUser: AuthUser = {
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * 访客模式直接进入（不调用后端）
+   * 访客模式直接进入（不调用后端，仅供测试）
    */
   const loginAsGuest = useCallback((roleMode: RoleMode = 'guest') => {
     const quickUser: AuthUser = {

@@ -90,7 +90,7 @@ cp .env.example .env
 ```ini
 
 # 前端访问后端的地址（替换为你的服务器 IP 或域名）
-BACKEND_URL=http://your_server_ip/api
+BACKEND_URL=http://your_server_ip
 ```
 
 > 注意：`.env` 中的 `DB_HOST=db` 保持不变，这是 Docker 内部网络的服务名称，无需修改。
