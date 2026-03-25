@@ -74,6 +74,7 @@ services:
      args:
        # Frontend will now make requests to the same domain through Caddy
        NEXT_PUBLIC_BACKEND_URL: ${BACKEND_URL}
+   restart: always
    # Remove external port mapping since Caddy will handle it
    ports:
      - "3000:3000"
