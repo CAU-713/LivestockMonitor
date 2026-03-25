@@ -1696,7 +1696,25 @@ function ChatPanel({ assistant, session }: { assistant: ChatAssistantInfo; sessi
                         '&:hover': { opacity: '1 !important' },
                         transition: 'opacity 0.15s',
                       }}
-                      onClick={() => navigator.clipboard.writeText(msg.content)}>
+                      onClick={() => {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                          navigator.clipboard.writeText(msg.content).catch(() => {
+                            const ta = document.createElement('textarea');
+                            ta.value = msg.content;
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            ta.remove();
+                          });
+                        } else {
+                          const ta = document.createElement('textarea');
+                          ta.value = msg.content;
+                          document.body.appendChild(ta);
+                          ta.select();
+                          document.execCommand('copy');
+                          ta.remove();
+                        }
+                      }}>
                       <CopyIcon sx={{ fontSize: 13 }} />
                     </IconButton>
                   </Tooltip>
