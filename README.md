@@ -113,7 +113,8 @@ docker compose up -d
 ```bash
 # 停止所有服务
 docker compose down
-
+# 停止所有服务并删除数据库里的数据
+docker-compose down -v
 # 更新代码后重新构建并启动
 git pull
 docker compose up -d --build
