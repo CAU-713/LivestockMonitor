@@ -298,7 +298,7 @@ export const cameraApi = {
 export const userApi = {
   async getUsers(): Promise<User[]> {
     try {
-      const res = await apiFetch<UserDTO[]>('/api/users/');
+      const res = await apiFetch<UserDTO[]>('/api/users');
       if (Array.isArray(res)) {
         return res.map(mapUser);
       }
@@ -310,21 +310,21 @@ export const userApi = {
   },
 
   async createUser(data: { name: string; password: string; role: number }): Promise<UserDTO> {
-    return apiFetch<UserDTO>('/api/users/', {
+    return apiFetch<UserDTO>('/api/users', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   async updateUser(id: number, data: { name?: string; password?: string; role?: number }): Promise<UserDTO> {
-    return apiFetch<UserDTO>(`/api/users/${id}/`, {
+    return apiFetch<UserDTO>(`/api/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
   },
 
   async deleteUser(id: number): Promise<void> {
-    await apiFetch<{ ok: boolean }>(`/api/users/${id}/`, { method: 'DELETE' });
+    await apiFetch<{ ok: boolean }>(`/api/users/${id}`, { method: 'DELETE' });
   },
 };
 
