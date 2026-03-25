@@ -34,7 +34,7 @@ def list_cameras(
     status: str | None = Query(None, description="按状态筛选: online/offline"),
     name: str | None = Query(None, description="按名称模糊搜索"),
     page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
+    page_size: int = Query(10, ge=1, le=10000, description="每页数量"),
 ):
     query = CameraQueryDTO(
         shed_id=shed_id,

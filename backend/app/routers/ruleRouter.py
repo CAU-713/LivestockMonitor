@@ -101,7 +101,7 @@ def get_alert_rules_with_pagination(
         sensor_id: Annotated[Optional[int], Query(description="传感器ID筛选", gt=0)] = None,
         search: Annotated[Optional[str], Query(description="搜索关键词")] = None,
         page: Annotated[int, Query(description="页码", ge=1)] = 1,
-        page_size: Annotated[int, Query(description="每页数量", ge=1, le=100)] = 10,
+        page_size: Annotated[int, Query(description="每页数量", ge=1, le=10000)] = 10,
 ) -> ResponseDTO[ListResponseData[AlertRuleResponseDTO]]:
     """获取规则列表（带分页）"""
     query_params = AlertRuleQueryDTO(

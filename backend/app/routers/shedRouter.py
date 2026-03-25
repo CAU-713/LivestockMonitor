@@ -51,7 +51,7 @@ def get_sheds(
         type: Annotated[int | None, Query(description="羊舍类型筛选", ge=1, le=4)] = None,
         search: Annotated[str | None, Query(description="搜索关键词")] = None,
         page: Annotated[int, Query(description="页码", ge=1)] = 1,
-        page_size: Annotated[int, Query(description="每页数量", ge=1, le=100)] = 10
+        page_size: Annotated[int, Query(description="每页数量", ge=1, le=10000)] = 10
 ) -> ResponseDTO[ListResponseData[ShedResponseDTO]]:
     """获取羊舍列表"""
     query_params = ShedQueryDTO(

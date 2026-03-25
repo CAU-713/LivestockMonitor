@@ -108,7 +108,7 @@ def get_video_history(
         ] = 1,
         page_size: Annotated[
             int,
-            Query(description="每页数量", ge=1, le=100)
+            Query(description="每页数量", ge=1, le=10000)
         ] = 20,
 ) -> ResponseDTO[VideoListResponseDTO]:
     """获取历史视频数据"""
@@ -145,7 +145,7 @@ def get_video_history_with_pagination(
         start_time: Annotated[Optional[datetime], Query(description="开始时间")] = None,
         end_time: Annotated[Optional[datetime], Query(description="结束时间")] = None,
         page: Annotated[int, Query(description="页码", ge=1)] = 1,
-        page_size: Annotated[int, Query(description="每页数量", ge=1, le=100)] = 20,
+        page_size: Annotated[int, Query(description="每页数量", ge=1, le=10000)] = 20,
 ) -> ResponseDTO[ListResponseData[VideoInfoDTO]]:
     """获取历史视频列表（带分页信息）"""
 

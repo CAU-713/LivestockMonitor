@@ -100,7 +100,7 @@ def get_sensors(
         status: Annotated[str | None, Query(description="传感器状态筛选")] = None,
         search: Annotated[str | None, Query(description="搜索关键词")] = None,
         page: Annotated[int, Query(description="页码", ge=1)] = 1,
-        page_size: Annotated[int, Query(description="每页数量", ge=1, le=100)] = 10
+        page_size: Annotated[int, Query(description="每页数量", ge=1, le=10000)] = 10
 ) -> ResponseDTO[ListResponseData[SensorResponseDTO]]:
     """获取传感器列表"""
     query_params = SensorQueryDTO(
