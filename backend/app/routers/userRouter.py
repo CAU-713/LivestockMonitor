@@ -35,24 +35,15 @@ def login_user(
     login_data: UserLoginDTO,
     session: SessionDep
 ) -> UserLoginResponseDTO:
-    """
-    用户登录接口
-    - **name**: 用户名
-    - **password**: 用户密码  
-    - **role_mode**: 前端选择的角色模式 (admin/research/guest)
-    """
     user = session.exec(select(UserDO).where(UserDO.name == login_data.name)).first()
     if not user:
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     if user.password != login_data.password:
         raise HTTPException(status_code=401, detail="用户名或密码错误")
-
-    # 更新最后登录时间
     user.last_login = datetime.utcnow()
     session.add(user)
     session.commit()
     session.refresh(user)
-
     return UserLoginResponseDTO(
         id=user.id,
         name=user.name,
@@ -61,68 +52,35 @@ def login_user(
     )
 
 
-@router.post("/", response_model=UserReadDTO, summary="创建新用户", description="根据提供的用户信息创建一个新的用户账户")
-def create_user(
-    user: UserCreateDTO,
-    session: SessionDep
-) -> UserReadDTO:
-    """
-    创建一个新用户
-
-    - **name**: 用户名
-    - **password**: 用户密码
-    - **role**: 用户角色 (0=管理员, 1=普通访客, 2=科研用户)
-    """
+# 注意：path 使用 "" 而非 "/"，配合 FastAPI(redirect_slashes=False) 避免 307 重定向问题
+@router.post("", response_model=UserReadDTO, summary="创建新用户")
+def create_user(user: UserCreateDTO, session: SessionDep) -> UserReadDTO:
     db_user = UserDO.model_validate(user)
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
     return db_user
 
-@router.get("/", response_model=List[UserReadDTO], summary="获取用户列表", description="分页获取用户列表信息")
+
+@router.get("", response_model=List[UserReadDTO], summary="获取用户列表")
 def read_users(
     session: SessionDep,
     offset: int = 0,
-    limit: int = Query(default=100, le=100, description="每页数量，最大100条"),
+    limit: int = Query(default=100, le=100),
 ) -> List[UserReadDTO]:
-    """
-    获取用户列表
+    return session.exec(select(UserDO).offset(offset).limit(limit)).all()
 
-    - **offset**: 偏移量，默认为 0
-    - **limit**: 每页数量，最大不能超过 100 条
-    """
-    users = session.exec(select(UserDO).offset(offset).limit(limit)).all()
-    return users
 
-@router.get("/{user_id}", response_model=UserReadDTO, summary="根据ID获取用户信息", description="通过用户ID获取特定用户的详细信息")
-def read_user(
-    user_id: int,
-    session: SessionDep
-) -> UserReadDTO:
-    """
-    根据用户ID获取用户信息
-
-    - **user_id**: 用户ID
-    """
+@router.get("/{user_id}", response_model=UserReadDTO, summary="根据ID获取用户信息")
+def read_user(user_id: int, session: SessionDep) -> UserReadDTO:
     user = session.get(UserDO, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     return user
 
-@router.patch("/{user_id}", response_model=UserReadDTO, summary="更新用户信息", description="根据用户ID部分更新用户信息")
-def update_user(
-    user_id: int,
-    user: UserUpdateDTO,
-    session: SessionDep
-) -> UserReadDTO:
-    """
-    更新指定用户的信息（部分更新）
 
-    - **user_id**: 要更新的用户ID
-    - **name**: 新用户名（可选）
-    - **password**: 新密码（可选）
-    - **role**: 新角色（可选）
-    """
+@router.patch("/{user_id}", response_model=UserReadDTO, summary="更新用户信息")
+def update_user(user_id: int, user: UserUpdateDTO, session: SessionDep) -> UserReadDTO:
     db_user = session.get(UserDO, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="用户不存在")
@@ -133,16 +91,9 @@ def update_user(
     session.refresh(db_user)
     return db_user
 
-@router.delete("/{user_id}", summary="删除用户", description="根据用户ID删除特定用户")
-def delete_user(
-    user_id: int,
-    session: SessionDep
-):
-    """
-    删除指定用户
 
-    - **user_id**: 要删除的用户ID
-    """
+@router.delete("/{user_id}", summary="删除用户")
+def delete_user(user_id: int, session: SessionDep):
     user = session.get(UserDO, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")

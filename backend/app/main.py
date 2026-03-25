@@ -2,25 +2,18 @@ import importlib
 import os
 import threading
 from pathlib import Path
-import uvicorn
-from fastapi import FastAPI
-
-from app.config import settings, create_db_and_tables
-from app.utils.importToHouseComprehensiveEnvironmentDO import import_HouseComprehensiveEnvironmentDO_from_excel
-from app.utils.importToEnterpriseFatteningEnvironmentDO import import_EnterpriseFatteningEnvironmentDO_from_csv
-import importlib
-import os
-import threading
-from pathlib import Path
 
 import uvicorn
-from app.config import settings, create_db_and_tables
-from app.utils.importToEnterpriseFatteningEnvironmentDO import import_EnterpriseFatteningEnvironmentDO_from_csv
-from app.utils.importToHouseComprehensiveEnvironmentDO import import_HouseComprehensiveEnvironmentDO_from_excel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+from app.config import settings, create_db_and_tables
+from app.utils.importToHouseComprehensiveEnvironmentDO import import_HouseComprehensiveEnvironmentDO_from_excel
+from app.utils.importToEnterpriseFatteningEnvironmentDO import import_EnterpriseFatteningEnvironmentDO_from_csv
+
+# redirect_slashes=False：禁止 FastAPI 对 /api/users 自动重定向到 /api/users/
+# 避免 Next.js 代理不跟随 307 重定向导致的 500 错误
+app = FastAPI(redirect_slashes=False)
 
 # 添加 CORS 中间件，允许前端跨域访问
 app.add_middleware(
