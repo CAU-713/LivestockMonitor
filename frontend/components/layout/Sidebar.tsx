@@ -26,9 +26,10 @@ import ChatIcon from '@mui/icons-material/Chat';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import StorageIcon from '@mui/icons-material/Storage';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 const DRAWER_WIDTH = 240;
 
-// 菜单项激活状态颜色
 const ACTIVE_BG = 'rgba(255,255,255,0.18)';
 const ACTIVE_TEXT = '#ffffff';
 const INACTIVE_TEXT = 'rgba(255,255,255,0.75)';
@@ -39,6 +40,9 @@ const Sidebar = () => {
   const pathname = usePathname();
   const [realtimeOpen, setRealtimeOpen] = React.useState(true);
   const [historyOpen, setHistoryOpen] = React.useState(true);
+
+  // 根据角色控制数据分析菜单项可见性
+  const { isGuest } = useAuth();
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '?');
 
@@ -95,7 +99,7 @@ const Sidebar = () => {
       }}
       open
     >
-      {/* Logo / 系统名称区域 */}
+      {/* Logo */}
       <Box
         sx={{
           px: 2,
@@ -122,16 +126,10 @@ const Sidebar = () => {
           <AgricultureIcon sx={{ color: '#ffffff', fontSize: 24 }} />
         </Box>
         <Box>
-          <Typography
-            variant="subtitle1"
-            sx={{ color: '#ffffff', fontWeight: 700, lineHeight: 1.2, fontSize: '0.95rem' }}
-          >
+          <Typography variant="subtitle1" sx={{ color: '#ffffff', fontWeight: 700, lineHeight: 1.2, fontSize: '0.95rem' }}>
             智慧牧场
           </Typography>
-          <Typography
-            variant="caption"
-            sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.7rem' }}
-          >
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.7rem' }}>
             监控管理平台
           </Typography>
         </Box>
@@ -140,29 +138,19 @@ const Sidebar = () => {
       {/* 主菜单 */}
       <List sx={{ px: 0.5, flex: 1 }}>
         {/* Dashboard */}
-        <ListItemButton
-          component={Link}
-          href="/dashboard"
-          sx={menuItemSx('/dashboard')}
-        >
+        <ListItemButton component={Link} href="/dashboard" sx={menuItemSx('/dashboard')}>
           <ListItemIcon sx={iconSx('/dashboard')}>
             <DashboardIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText
-            primary="系统总览"
-            primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/dashboard') ? 600 : 400 }}
-          />
+          <ListItemText primary="系统总览" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/dashboard') ? 600 : 400 }} />
         </ListItemButton>
 
-        {/* 实时数据 (Collapsible) */}
+        {/* 实时数据 */}
         <ListItemButton onClick={() => setRealtimeOpen(!realtimeOpen)} sx={parentMenuSx(realtimeOpen)}>
           <ListItemIcon sx={parentIconSx(realtimeOpen)}>
             <MonitorHeartIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText
-            primary="实时数据"
-            primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-          />
+          <ListItemText primary="实时数据" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />
           {realtimeOpen
             ? <ExpandLess sx={{ color: 'rgba(255,255,255,0.65)', fontSize: 18 }} />
             : <ExpandMore sx={{ color: 'rgba(255,255,255,0.65)', fontSize: 18 }} />
@@ -170,44 +158,27 @@ const Sidebar = () => {
         </ListItemButton>
         <Collapse in={realtimeOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            <ListItemButton
-              component={Link}
-              href="/monitor/environmental-data"
-              sx={{ ...menuItemSx('/monitor/environmental-data'), pl: 4 }}
-            >
+            <ListItemButton component={Link} href="/monitor/environmental-data" sx={{ ...menuItemSx('/monitor/environmental-data'), pl: 4 }}>
               <ListItemIcon sx={iconSx('/monitor/environmental-data')}>
                 <SensorsIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText
-                primary="环境数据"
-                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/monitor/environmental-data') ? 600 : 400 }}
-              />
+              <ListItemText primary="环境数据" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/monitor/environmental-data') ? 600 : 400 }} />
             </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/monitor/behavior"
-              sx={{ ...menuItemSx('/monitor/behavior'), pl: 4 }}
-            >
+            <ListItemButton component={Link} href="/monitor/behavior" sx={{ ...menuItemSx('/monitor/behavior'), pl: 4 }}>
               <ListItemIcon sx={iconSx('/monitor/behavior')}>
                 <VideocamIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText
-                primary="视频行为"
-                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/monitor/behavior') ? 600 : 400 }}
-              />
+              <ListItemText primary="视频行为" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/monitor/behavior') ? 600 : 400 }} />
             </ListItemButton>
           </List>
         </Collapse>
 
-        {/* 历史数据 (Collapsible) */}
+        {/* 历史数据 */}
         <ListItemButton onClick={() => setHistoryOpen(!historyOpen)} sx={parentMenuSx(historyOpen)}>
           <ListItemIcon sx={parentIconSx(historyOpen)}>
             <StorageIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText
-            primary="历史数据"
-            primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-          />
+          <ListItemText primary="历史数据" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />
           {historyOpen
             ? <ExpandLess sx={{ color: 'rgba(255,255,255,0.65)', fontSize: 18 }} />
             : <ExpandMore sx={{ color: 'rgba(255,255,255,0.65)', fontSize: 18 }} />
@@ -215,79 +186,47 @@ const Sidebar = () => {
         </ListItemButton>
         <Collapse in={historyOpen} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            <ListItemButton
-              component={Link}
-              href="/history/environmental-data"
-              sx={{ ...menuItemSx('/history/environmental-data'), pl: 4 }}
-            >
+            <ListItemButton component={Link} href="/history/environmental-data" sx={{ ...menuItemSx('/history/environmental-data'), pl: 4 }}>
               <ListItemIcon sx={iconSx('/history/environmental-data')}>
                 <SensorsIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText
-                primary="环境数据"
-                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/history/environmental-data') ? 600 : 400 }}
-              />
+              <ListItemText primary="环境数据" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/history/environmental-data') ? 600 : 400 }} />
             </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/history/video-data"
-              sx={{ ...menuItemSx('/history/video-data'), pl: 4 }}
-            >
+            <ListItemButton component={Link} href="/history/video-data" sx={{ ...menuItemSx('/history/video-data'), pl: 4 }}>
               <ListItemIcon sx={iconSx('/history/video-data')}>
                 <VideocamIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText
-                primary="视频数据"
-                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/history/video-data') ? 600 : 400 }}
-              />
+              <ListItemText primary="视频数据" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/history/video-data') ? 600 : 400 }} />
             </ListItemButton>
-            <ListItemButton
-              component={Link}
-              href="/history/data-analysis"
-              sx={{ ...menuItemSx('/history/data-analysis'), pl: 4 }}
-            >
-              <ListItemIcon sx={iconSx('/history/data-analysis')}>
-                <QueryStatsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText
-                primary="数据分析"
-                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/history/data-analysis') ? 600 : 400 }}
-              />
-            </ListItemButton>
+            {/* 仅当非访客角色时显示数据分析 */}
+            {!isGuest && (
+              <ListItemButton component={Link} href="/history/data-analysis" sx={{ ...menuItemSx('/history/data-analysis'), pl: 4 }}>
+                <ListItemIcon sx={iconSx('/history/data-analysis')}>
+                  <QueryStatsIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="数据分析" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/history/data-analysis') ? 600 : 400 }} />
+              </ListItemButton>
+            )}
           </List>
         </Collapse>
 
         {/* 智能问答 */}
-        <ListItemButton
-          component={Link}
-          href="/ragflow"
-          sx={menuItemSx('/ragflow')}
-        >
+        <ListItemButton component={Link} href="/ragflow" sx={menuItemSx('/ragflow')}>
           <ListItemIcon sx={iconSx('/ragflow')}>
             <ChatIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText
-            primary="智能问答"
-            primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/ragflow') ? 600 : 400 }}
-          />
+          <ListItemText primary="智能问答" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/ragflow') ? 600 : 400 }} />
         </ListItemButton>
       </List>
 
       {/* 底部：设置 */}
       <Box sx={{ borderTop: '1px solid rgba(255,255,255,0.12)', pt: 1, pb: 1 }}>
         <List sx={{ px: 0.5 }}>
-          <ListItemButton
-            component={Link}
-            href="/settings"
-            sx={menuItemSx('/settings')}
-          >
+          <ListItemButton component={Link} href="/settings" sx={menuItemSx('/settings')}>
             <ListItemIcon sx={iconSx('/settings')}>
               <SettingsIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText
-              primary="系统设置"
-              primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/settings') ? 600 : 400 }}
-            />
+            <ListItemText primary="系统设置" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/settings') ? 600 : 400 }} />
           </ListItemButton>
         </List>
       </Box>

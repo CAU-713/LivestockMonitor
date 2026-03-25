@@ -12,12 +12,14 @@ import {
   Paper,
   Stack,
   Divider,
+  Alert,
 } from '@mui/material';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import { useAuth, RoleMode } from '@/contexts/AuthContext';
 
 const features = [
   { icon: <MonitorHeartIcon sx={{ fontSize: 20 }} />, text: '实时环境监控，掌握牧场动态' },
@@ -26,7 +28,37 @@ const features = [
 ];
 
 const LoginPage = () => {
-  const [role, setRole] = useState<'admin' | 'guest' | 'research'>('guest');
+  const router = useRouter();
+  const { login, loginAsGuest } = useAuth();
+
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<RoleMode>('guest');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError('请输入用户名和密码');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await login(username.trim(), password.trim(), role);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || '登录失败，请检查用户名和密码');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuestEnter = () => {
+    loginAsGuest();
+    router.push('/dashboard');
+  };
 
   return (
     <Box
@@ -52,121 +84,37 @@ const LoginPage = () => {
           overflow: 'hidden',
         }}
       >
-        {/* 装饰圆圈（背景装饰） */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: -80,
-            right: -80,
-            width: 320,
-            height: 320,
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.06)',
-            pointerEvents: 'none',
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: -120,
-            left: -60,
-            width: 400,
-            height: 400,
-            borderRadius: '50%',
-            background: 'rgba(255,255,255,0.04)',
-            pointerEvents: 'none',
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '40%',
-            right: '5%',
-            width: 180,
-            height: 180,
-            borderRadius: '50%',
-            background: 'rgba(165,214,167,0.08)',
-            pointerEvents: 'none',
-          }}
-        />
+        {/* 装饰圆圈 */}
+        <Box sx={{ position: 'absolute', top: -80, right: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+        <Box sx={{ position: 'absolute', bottom: -120, left: -60, width: 400, height: 400, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+        <Box sx={{ position: 'absolute', top: '40%', right: '5%', width: 180, height: 180, borderRadius: '50%', background: 'rgba(165,214,167,0.08)', pointerEvents: 'none' }} />
 
-        {/* Logo + 系统名 */}
+        {/* Logo */}
         <Stack direction="row" alignItems="center" spacing={2} mb={4} sx={{ position: 'relative', zIndex: 1 }}>
-          <Box
-            sx={{
-              width: 56,
-              height: 56,
-              borderRadius: '14px',
-              background: 'rgba(255,255,255,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backdropFilter: 'blur(10px)',
-            }}
-          >
+          <Box sx={{ width: 56, height: 56, borderRadius: '14px', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
             <AgricultureIcon sx={{ color: '#ffffff', fontSize: 32 }} />
           </Box>
           <Box>
-            <Typography variant="h5" sx={{ color: '#ffffff', fontWeight: 800, lineHeight: 1.1 }}>
-              智慧牧场
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }}>
-              Livestock Monitoring System
-            </Typography>
+            <Typography variant="h5" sx={{ color: '#ffffff', fontWeight: 800, lineHeight: 1.1 }}>智慧牧场</Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)' }}>Livestock Monitoring System</Typography>
           </Box>
         </Stack>
 
         {/* 主标题 */}
         <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 420 }}>
-          <Typography
-            variant="h3"
-            sx={{
-              color: '#ffffff',
-              fontWeight: 800,
-              lineHeight: 1.2,
-              mb: 2,
-              fontSize: { xs: '1.8rem', md: '2.4rem' },
-            }}
-          >
-            智能化牧场管理
-            <br />
-            从这里开始
+          <Typography variant="h3" sx={{ color: '#ffffff', fontWeight: 800, lineHeight: 1.2, mb: 2, fontSize: { xs: '1.8rem', md: '2.4rem' } }}>
+            智能化牧场管理<br />从这里开始
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'rgba(255,255,255,0.8)',
-              mb: 5,
-              lineHeight: 1.7,
-            }}
-          >
-            集成环境监测、行为识别、智能预警于一体，
-            <br />
-            为您的牧场提供全方位数字化管理方案。
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', mb: 5, lineHeight: 1.7 }}>
+            集成环境监测、行为识别、智能预警于一体，<br />为您的牧场提供全方位数字化管理方案。
           </Typography>
-
-          {/* 特性列表 */}
           <Stack spacing={2}>
             {features.map((feature, idx) => (
               <Stack key={idx} direction="row" alignItems="center" spacing={1.5}>
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#A5D6A7',
-                    flexShrink: 0,
-                  }}
-                >
+                <Box sx={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#A5D6A7', flexShrink: 0 }}>
                   {feature.icon}
                 </Box>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
-                  {feature.text}
-                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>{feature.text}</Typography>
               </Stack>
             ))}
           </Stack>
@@ -186,26 +134,19 @@ const LoginPage = () => {
           py: { xs: 5, md: 8 },
         }}
       >
-        <Paper
-          elevation={2}
-          sx={{
-            width: '100%',
-            maxWidth: 400,
-            p: { xs: 3, md: 4 },
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(46,125,50,0.12)',
-          }}
-        >
+        <Paper elevation={2} sx={{ width: '100%', maxWidth: 400, p: { xs: 3, md: 4 }, borderRadius: 3, boxShadow: '0 8px 32px rgba(46,125,50,0.12)' }}>
           <Box mb={3.5}>
-            <Typography variant="h5" fontWeight={700} color="text.primary" gutterBottom>
-              欢迎回来 👋
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              请登录以访问智慧牧场监控系统
-            </Typography>
+            <Typography variant="h5" fontWeight={700} color="text.primary" gutterBottom>欢迎回来 👋</Typography>
+            <Typography variant="body2" color="text.secondary">请登录以访问智慧牧场监控系统</Typography>
           </Box>
 
-          <Box component="form" noValidate>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
+
+          <Box component="form" noValidate onSubmit={handleSubmit}>
             <TextField
               margin="normal"
               required
@@ -217,6 +158,8 @@ const LoginPage = () => {
               autoFocus
               size="small"
               sx={{ mb: 1 }}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
             <TextField
               margin="normal"
@@ -229,44 +172,23 @@ const LoginPage = () => {
               autoComplete="current-password"
               size="small"
               sx={{ mb: 2 }}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
 
             {/* 角色选择 */}
-            <Box
-              sx={{
-                mb: 3,
-                p: 2,
-                borderRadius: 2,
-                background: 'rgba(46,125,50,0.05)',
-                border: '1px solid rgba(46,125,50,0.15)',
-              }}
-            >
-              <FormLabel
-                component="legend"
-                sx={{ fontSize: '0.8rem', mb: 1, color: 'text.secondary', fontWeight: 600 }}
-              >
+            <Box sx={{ mb: 3, p: 2, borderRadius: 2, background: 'rgba(46,125,50,0.05)', border: '1px solid rgba(46,125,50,0.15)' }}>
+              <FormLabel component="legend" sx={{ fontSize: '0.8rem', mb: 1, color: 'text.secondary', fontWeight: 600 }}>
                 选择登录角色
               </FormLabel>
               <RadioGroup
                 row
                 value={role}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRole(e.target.value as typeof role)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRole(e.target.value as RoleMode)}
               >
-                <FormControlLabel
-                  value="admin"
-                  control={<Radio size="small" color="primary" />}
-                  label={<Typography variant="body2">管理员</Typography>}
-                />
-                <FormControlLabel
-                  value="research"
-                  control={<Radio size="small" color="primary" />}
-                  label={<Typography variant="body2">科研模式</Typography>}
-                />
-                <FormControlLabel
-                  value="guest"
-                  control={<Radio size="small" color="primary" />}
-                  label={<Typography variant="body2">访客</Typography>}
-                />
+                <FormControlLabel value="admin" control={<Radio size="small" color="primary" />} label={<Typography variant="body2">管理员</Typography>} />
+                <FormControlLabel value="research" control={<Radio size="small" color="primary" />} label={<Typography variant="body2">科研模式</Typography>} />
+                <FormControlLabel value="guest" control={<Radio size="small" color="primary" />} label={<Typography variant="body2">访客</Typography>} />
               </RadioGroup>
             </Box>
 
@@ -276,24 +198,22 @@ const LoginPage = () => {
               variant="contained"
               color="primary"
               size="large"
+              disabled={loading}
               sx={{ mb: 2, py: 1.2, fontSize: '1rem' }}
             >
-              登 录
+              {loading ? '登录中...' : '登 录'}
             </Button>
 
             <Divider sx={{ my: 2 }}>
-              <Typography variant="caption" color="text.secondary">
-                或者
-              </Typography>
+              <Typography variant="caption" color="text.secondary">或者</Typography>
             </Divider>
 
             <Button
-              component={Link}
-              href="/dashboard"
               fullWidth
               variant="outlined"
               color="primary"
               sx={{ py: 1 }}
+              onClick={handleGuestEnter}
             >
               直接进入（访客模式）
             </Button>

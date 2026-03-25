@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Grid from '@mui/material/GridLegacy';
 import {
   Paper,
@@ -14,6 +14,7 @@ import {
   SelectChangeEvent,
   Chip,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import Link from 'next/link';
 
@@ -38,44 +39,27 @@ import DeviceStatusList from './components/AlertList';
 import ComfortAssessmentPanel from './components/ComfortAssessmentPanel';
 import LineChart from '../../../components/charts/LineChart';
 import {
-  mockDashboardKPIs,
   mockOverallTemperatureTrend,
   mockOverallHumidityTrend,
   mockOfflineDevices,
-  mockSheds,
-  mockSensors,
+  mockSheds as fallbackSheds,
+  mockSensors as fallbackSensors,
 } from '../../../constants/mockData';
 import type { ComfortAssessment } from './components/ComfortAssessmentPanel';
 import { MergedChartData } from '@/types';
+import type { Shed, Sensor } from '@/types';
+import { shedApi, sensorApi } from '@/lib/api/apiService';
 
 type ChartType = 'temperature' | 'humidity';
 type KPIStatus = 'normal' | 'warning' | 'danger';
 
-// KPI 颜色配置
 const kpiConfig = [
-  {
-    id: 'livestock',
-    accentColor: '#2E7D32',
-    bgColor: '#E8F5E9',
-  },
-  {
-    id: 'area',
-    accentColor: '#1565C0',
-    bgColor: '#E3F2FD',
-  },
-  {
-    id: 'devices',
-    accentColor: '#6A1B9A',
-    bgColor: '#F3E5F5',
-  },
-  {
-    id: 'temp',
-    accentColor: '#E65100',
-    bgColor: '#FFF3E0',
-  },
+  { id: 'livestock', accentColor: '#2E7D32', bgColor: '#E8F5E9' },
+  { id: 'area', accentColor: '#1565C0', bgColor: '#E3F2FD' },
+  { id: 'devices', accentColor: '#6A1B9A', bgColor: '#F3E5F5' },
+  { id: 'temp', accentColor: '#E65100', bgColor: '#FFF3E0' },
 ];
 
-// 传感器类型图标映射
 const sensorIconMap: Record<string, React.ReactNode> = {
   Temperature: <ThermostatAutoIcon sx={{ fontSize: 14 }} />,
   Humidity: <WaterDropIcon sx={{ fontSize: 14 }} />,
@@ -89,11 +73,9 @@ const sensorIconMap: Record<string, React.ReactNode> = {
   Light: <LightModeIcon sx={{ fontSize: 14 }} />,
 };
 
-// 传感器分组（基础环境 vs 气体指标）
 const basicSensorTypes = ['Temperature', 'Humidity', 'WindSpeed'];
 const gasSensorTypes = ['Ammonia', 'CO2', 'CH4', 'Oxygen', 'H2S', 'PM', 'Light'];
 
-// 传感器格式化
 const sensorFormatMap: Record<string, { unit: string; label: string }> = {
   Temperature: { unit: '°C', label: '温度' },
   Humidity: { unit: '%', label: '湿度' },
@@ -120,8 +102,53 @@ const sensorChipColors: Record<string, { bg: string; color: string }> = {
   Light: { bg: '#FFFDE7', color: '#F9A825' },
 };
 
+const assessEnvironment = (
+  temp?: number | string,
+  humidity?: number | string,
+  wind?: number | string,
+  radiation?: number | string
+): ComfortAssessment => {
+  const t = typeof temp === 'number' ? temp : parseFloat(String(temp));
+  const h = typeof humidity === 'number' ? humidity : parseFloat(String(humidity));
+  const w = typeof wind === 'number' ? wind : parseFloat(String(wind));
+  const r = typeof radiation === 'number' ? radiation : parseFloat(String(radiation));
+
+  if (t > 4.6 && t < 6.7 && h > 66 && h < 88 && w < 0.4 && r > 9290.16 && r < 0.5) {
+    return { status: 'comfort', label: '正常阶段', color: '#4CAF50', backgroundColor: '#4CAF50', description: '满足正常阶段所有条件' };
+  }
+  if (t > 1.9 && t < 4.5 && h > 76 && h < 88 && w < 9340.48 && r > 0.27 && r < 0.43) {
+    return { status: 'cold-stress', label: '轻度冷应激', color: '#FF9800', backgroundColor: '#FF9800', description: '满足轻度冷应激条件，需关注保温和供暖' };
+  }
+  if (t < 2 && h > 65 && h < 76 && w > 0.5 && w < 9390.92 && r > -0.6 && r < 0.27) {
+    return { status: 'cold-stress', label: '重度冷应激', color: '#F44336', backgroundColor: '#F44336', description: '满足重度冷应激条件，需立即采取保暖措施' };
+  }
+  return { status: 'cold-stress', label: '未定义', color: '#9E9E9E', backgroundColor: '#9E9E9E', description: '当前环境参数未命中给定规则' };
+};
+
 const DashboardPage = () => {
   const [selectedChart, setSelectedChart] = useState<ChartType>('temperature');
+  const [sheds, setSheds] = useState<Shed[]>(fallbackSheds);
+  const [sensors, setSensors] = useState<Sensor[]>(fallbackSensors);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [shedData, sensorData] = await Promise.all([
+          shedApi.getSheds(),
+          sensorApi.getSensors({ page_size: 500 }),
+        ]);
+        if (shedData.length > 0) setSheds(shedData);
+        if (sensorData.length > 0) setSensors(sensorData);
+      } catch (e) {
+        console.warn('Dashboard load failed, using mock data', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleChartChange = (event: SelectChangeEvent<string>) => {
     setSelectedChart(event.target.value as ChartType);
@@ -132,44 +159,18 @@ const DashboardPage = () => {
     humidity: mockOverallHumidityTrend,
   };
 
-  // KPI 数据
+  // 计算 KPI
+  const totalLivestock = sheds.reduce((sum, s) => sum + (s.livestockCount || 0), 0);
+  const totalArea = sheds.reduce((sum, s) => sum + (s.area || 0), 0);
+  const onlineSensors = sensors.filter((s) => s.status === 'active').length;
+  const avgTemp = sensors.filter((s) => s.type === 'Temperature' && s.lastReading != null)
+    .reduce((sum, s, _, arr) => sum + s.lastReading! / arr.length, 0);
+
   const kpiData = [
-    {
-      id: 'livestock',
-      title: '养殖动物总数',
-      icon: <PetsIcon />,
-      value: mockDashboardKPIs.totalLivestock.value,
-      unit: mockDashboardKPIs.totalLivestock.unit,
-      status: 'normal' as KPIStatus,
-      subtitle: '全场存栏量',
-    },
-    {
-      id: 'area',
-      title: '畜舍总面积',
-      icon: <HomeWorkIcon />,
-      value: mockDashboardKPIs.totalArea.value,
-      unit: mockDashboardKPIs.totalArea.unit,
-      status: 'normal' as KPIStatus,
-      subtitle: '可用养殖空间',
-    },
-    {
-      id: 'devices',
-      title: '工作设备数',
-      icon: <DevicesIcon />,
-      value: mockDashboardKPIs.deviceStatus.value,
-      unit: undefined,
-      status: 'normal' as KPIStatus,
-      subtitle: '传感器与摄像头',
-    },
-    {
-      id: 'temp',
-      title: '畜舍平均温度',
-      icon: <ThermostatIcon />,
-      value: mockDashboardKPIs.avgTemperature.value,
-      unit: mockDashboardKPIs.avgTemperature.unit,
-      status: mockDashboardKPIs.avgTemperature.status as KPIStatus,
-      subtitle: '所有羊舍均值',
-    },
+    { id: 'livestock', title: '养殖动物总数', icon: <PetsIcon />, value: totalLivestock, unit: '只', status: 'normal' as KPIStatus, subtitle: '全场存栏量' },
+    { id: 'area', title: '畜舍总面积', icon: <HomeWorkIcon />, value: totalArea || '—', unit: totalArea ? '㎡' : undefined, status: 'normal' as KPIStatus, subtitle: '可用养殖空间' },
+    { id: 'devices', title: '工作设备数', icon: <DevicesIcon />, value: `${onlineSensors} / ${sensors.length}`, unit: undefined, status: 'normal' as KPIStatus, subtitle: '在线传感器' },
+    { id: 'temp', title: '畜舍平均温度', icon: <ThermostatIcon />, value: avgTemp ? parseFloat(avgTemp.toFixed(1)) : '—', unit: avgTemp ? '°C' : undefined, status: (avgTemp > 25 ? 'warning' : 'normal') as KPIStatus, subtitle: '所有羊舍均值' },
   ];
 
   return (
@@ -182,7 +183,7 @@ const DashboardPage = () => {
             <KPICard
               title={kpi.title}
               icon={kpi.icon}
-              value={kpi.value}
+              value={kpi.value as any}
               unit={kpi.unit}
               status={kpi.status}
               accentColor={cfg?.accentColor}
@@ -193,54 +194,18 @@ const DashboardPage = () => {
         );
       })}
 
-      {/* Row 2: 趋势图 + 告警列表 */}
+      {/* Row 2: 趋势图 + 告警列表（保持 mock 数据）*/}
       <Grid item xs={12} lg={8} sx={{ height: 430 }}>
-        <Paper
-          elevation={2}
-          sx={{
-            p: 2.5,
-            borderRadius: 3,
-            height: '100%',
-            borderTop: '4px solid #2E7D32',
-          }}
-        >
+        <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3, height: '100%', borderTop: '4px solid #2E7D32' }}>
           <Stack direction="row" alignItems="center" mb={2} spacing={2}>
-            <Typography variant="h6" fontWeight={700}>
-              畜舍总体趋势
-            </Typography>
+            <Typography variant="h6" fontWeight={700}>畜舍总体趋势</Typography>
             <FormControl size="small" sx={{ minWidth: 110 }}>
               <InputLabel>指标</InputLabel>
-              <Select
-                value={selectedChart}
-                label="指标"
-                onChange={handleChartChange}
-              >
+              <Select value={selectedChart} label="指标" onChange={handleChartChange}>
                 <MenuItem value="temperature">温度</MenuItem>
                 <MenuItem value="humidity">湿度</MenuItem>
               </Select>
             </FormControl>
-            {chartDataMap[selectedChart]?.data.length > 0 && (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.78rem' }}>
-                {(() => {
-                  const endDate = new Date();
-                  const endMonth = endDate.getMonth() + 1;
-                  const endDay = endDate.getDate();
-                  const startDate = new Date();
-                  startDate.setDate(startDate.getDate() - 1);
-                  const startMonth = startDate.getMonth() + 1;
-                  const startDay = startDate.getDate();
-                  const firstTime = chartDataMap[selectedChart].data[0]?.time;
-                  const lastTime = chartDataMap[selectedChart].data[chartDataMap[selectedChart].data.length - 1]?.time;
-                  const parseTime = (timeStr: string) => {
-                    const [hour, minute] = timeStr.split(':').map(Number);
-                    return { hour, minute };
-                  };
-                  const firstParsed = parseTime(firstTime);
-                  const lastParsed = parseTime(lastTime);
-                  return `${startMonth}/${startDay} ${firstParsed.hour.toString().padStart(2, '0')}:${firstParsed.minute.toString().padStart(2, '0')} - ${endMonth}/${endDay} ${lastParsed.hour.toString().padStart(2, '0')}:${lastParsed.minute.toString().padStart(2, '0')}`;
-                })()}
-              </Typography>
-            )}
           </Stack>
           <LineChart chartData={chartDataMap[selectedChart]} />
         </Paper>
@@ -249,96 +214,47 @@ const DashboardPage = () => {
         <DeviceStatusList devices={mockOfflineDevices} />
       </Grid>
 
-      {/* Row 3: 各区域概览标题 */}
+      {/* Row 3: 各区域概览 */}
       <Grid item xs={12}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Typography variant="h6" fontWeight={700}>
-            各区域概览
-          </Typography>
-          <Chip
-            label={`共 ${mockSheds.length} 个区域`}
-            size="small"
-            sx={{ backgroundColor: 'rgba(46,125,50,0.1)', color: '#2E7D32', fontWeight: 600 }}
-          />
+          <Typography variant="h6" fontWeight={700}>各区域概览</Typography>
+          {loading ? (
+            <CircularProgress size={16} />
+          ) : (
+            <Chip label={`共 ${sheds.length} 个区域`} size="small" sx={{ backgroundColor: 'rgba(46,125,50,0.1)', color: '#2E7D32', fontWeight: 600 }} />
+          )}
         </Stack>
       </Grid>
 
-      {/* Row 3: Shed 卡片 */}
-      {mockSheds.map((shed) => {
-        const shedSensors = mockSensors.filter((s) => s.shedId === shed.id);
+      {sheds.map((shed) => {
+        const shedSensors = sensors.filter((s) => s.shedId === shed.id);
 
         const getSensorReading = (type: string): string | number => {
           return shedSensors.find((s) => s.type === type)?.lastReading ?? 'N/A';
         };
 
         const getSensorValue = (type: string) =>
-          shedSensors.find((s) => s.type === (type as any))?.lastReading as number | undefined;
-
-        const assessEnvironment = (
-          temp?: number | string,
-          humidity?: number | string,
-          wind?: number | string,
-          radiation?: number | string
-        ): ComfortAssessment => {
-          const t = typeof temp === 'number' ? temp : parseFloat(String(temp));
-          const h = typeof humidity === 'number' ? humidity : parseFloat(String(humidity));
-          const w = typeof wind === 'number' ? wind : parseFloat(String(wind));
-          const r = typeof radiation === 'number' ? radiation : parseFloat(String(radiation));
-
-          if (t > 4.6 && t < 6.7 && h > 66 && h < 88 && w < 0.4 && r > 9290.16 && r < 0.5) {
-            return { status: 'comfort', label: '正常阶段', color: '#4CAF50', backgroundColor: '#4CAF50', description: '满足正常阶段所有条件' };
-          }
-          if (t > 1.9 && t < 4.5 && h > 76 && h < 88 && w < 9340.48 && r > 0.27 && r < 0.43) {
-            return { status: 'cold-stress', label: '轻度冷应激', color: '#FF9800', backgroundColor: '#FF9800', description: '满足轻度冷应激条件，需关注保温和供暖' };
-          }
-          if (t < 2 && h > 65 && h < 76 && w > 0.5 && w < 9390.92 && r > -0.6 && r < 0.27) {
-            return { status: 'cold-stress', label: '重度冷应激', color: '#F44336', backgroundColor: '#F44336', description: '满足重度冷应激条件，需立即采取保暖措施' };
-          }
-          if (t > 1.2 && t < 6.1 && h > 64 && h < 66 && w > 0.23 && w < 0.95 && r > -0.35 && r < 0.23) {
-            return { status: 'cold-stress', label: '冷应激恢复阶段', color: '#00ACC1', backgroundColor: '#00ACC1', description: '处于冷应激恢复阶段，环境逐步恢复' };
-          }
-          return { status: 'cold-stress', label: '未定义', color: '#9E9E9E', backgroundColor: '#9E9E9E', description: '当前环境参数未命中给定规则，请检查传感器或规则' };
-        };
+          shedSensors.find((s) => s.type === type)?.lastReading as number | undefined;
 
         const envTemp = getSensorValue('Temperature') ?? getSensorReading('Temperature');
         const envHumidity = getSensorValue('Humidity') ?? getSensorReading('Humidity');
         const envWind = getSensorValue('WindSpeed') ?? getSensorReading('WindSpeed');
-        const envRadiation = getSensorValue('Radiation') ?? undefined;
-        const computedAssessment = assessEnvironment(envTemp, envHumidity, envWind, envRadiation);
+        const computedAssessment = assessEnvironment(envTemp, envHumidity, envWind);
 
         return (
           <Grid item xs={12} md={6} key={shed.id}>
-            <Paper
-              elevation={2}
-              sx={{
-                borderRadius: 3,
-                overflow: 'hidden',
-                transition: 'box-shadow 0.2s ease',
-                '&:hover': { boxShadow: '0 6px 20px rgba(46,125,50,0.15)' },
-              }}
-            >
-              {/* 卡片顶部绿色条 */}
+            <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden', transition: 'box-shadow 0.2s ease', '&:hover': { boxShadow: '0 6px 20px rgba(46,125,50,0.15)' } }}>
               <Box sx={{ height: 4, background: 'linear-gradient(90deg, #1B5E20, #66BB6A)' }} />
-
               <Box sx={{ p: 2.5 }}>
-                {/* 标题行 */}
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                   <Box>
-                    <Typography variant="h6" fontWeight={700}>
-                      {shed.name}
-                    </Typography>
+                    <Typography variant="h6" fontWeight={700}>{shed.name}</Typography>
                     <Stack direction="row" alignItems="center" spacing={1} mt={0.25}>
                       <Chip
                         icon={<PetsIcon sx={{ fontSize: '12px !important' }} />}
                         label={`${shed.livestockCount} 只动物`}
                         size="small"
-                        sx={{
-                          backgroundColor: '#E8F5E9',
-                          color: '#2E7D32',
-                          fontWeight: 600,
-                          fontSize: '0.72rem',
-                          height: 22,
-                        }}
+                        sx={{ backgroundColor: '#E8F5E9', color: '#2E7D32', fontWeight: 600, fontSize: '0.72rem', height: 22 }}
                       />
                     </Stack>
                   </Box>
@@ -356,7 +272,6 @@ const DashboardPage = () => {
 
                 <Divider sx={{ mb: 2 }} />
 
-                {/* 基础环境传感器 */}
                 <Box mb={1.5}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
                     基础环境
@@ -372,21 +287,13 @@ const DashboardPage = () => {
                           icon={<Box sx={{ display: 'flex', color: chipStyle.color }}>{sensorIconMap[type]}</Box>}
                           label={`${fmt.label} ${reading}${reading !== 'N/A' ? fmt.unit : ''}`}
                           size="small"
-                          sx={{
-                            backgroundColor: chipStyle.bg,
-                            color: chipStyle.color,
-                            fontWeight: 600,
-                            fontSize: '0.72rem',
-                            height: 24,
-                            '& .MuiChip-icon': { color: chipStyle.color, ml: '6px' },
-                          }}
+                          sx={{ backgroundColor: chipStyle.bg, color: chipStyle.color, fontWeight: 600, fontSize: '0.72rem', height: 24, '& .MuiChip-icon': { color: chipStyle.color, ml: '6px' } }}
                         />
                       );
                     })}
                   </Stack>
                 </Box>
 
-                {/* 气体指标传感器 */}
                 <Box mb={2}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
                     气体指标
@@ -402,21 +309,13 @@ const DashboardPage = () => {
                           icon={<Box sx={{ display: 'flex', color: chipStyle.color }}>{sensorIconMap[type]}</Box>}
                           label={`${fmt.label} ${reading}${reading !== 'N/A' ? fmt.unit : ''}`}
                           size="small"
-                          sx={{
-                            backgroundColor: chipStyle.bg,
-                            color: chipStyle.color,
-                            fontWeight: 600,
-                            fontSize: '0.72rem',
-                            height: 24,
-                            '& .MuiChip-icon': { color: chipStyle.color, ml: '6px' },
-                          }}
+                          sx={{ backgroundColor: chipStyle.bg, color: chipStyle.color, fontWeight: 600, fontSize: '0.72rem', height: 24, '& .MuiChip-icon': { color: chipStyle.color, ml: '6px' } }}
                         />
                       );
                     })}
                   </Stack>
                 </Box>
 
-                {/* 环境舒适度 */}
                 <ComfortAssessmentPanel assessment={computedAssessment} />
               </Box>
             </Paper>

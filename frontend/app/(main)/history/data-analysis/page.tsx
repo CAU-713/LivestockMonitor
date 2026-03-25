@@ -1,7 +1,7 @@
 'use client';
-
-import React, { useState } from 'react';
-import Grid from '@mui/material/GridLegacy';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Box,
   Card,
@@ -155,6 +155,16 @@ const modalStyle = {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const DataAnalysisPage = () => {
+  const { isGuest } = useAuth();
+  const router = useRouter();
+
+  // 访客模式禁止访问数据分析页
+  useEffect(() => {
+    if (isGuest) {
+      router.replace('/dashboard');
+    }
+  }, [isGuest, router]);
+
   const [tabValue, setTabValue] = useState(0);
   const [shed, setShed] = useState('');
   const [selectedVariables, setSelectedVariables] = useState<string[]>([]);
