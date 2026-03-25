@@ -23,12 +23,6 @@ class Settings(BaseSettings):
     RAGFLOW_API_KEY: str = "ragflow--xJIhv2FgUOMSltDf_qVhQtKdZcWwnZgyepE7E2S7ls"
     RAGFLOW_BASE_URL: str = "http://127.0.0.1:8666"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # 如果 db_host 是 "db"，则替换为 "localhost"
-        if self.db_host == "db":
-            self.db_host = "localhost"
-
     class Config:
         env_file = ".env"
 
