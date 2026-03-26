@@ -48,7 +48,6 @@ import type {
 /** 后端路由前缀（经 Next.js rewrite 代理） */
 const BASE = '/api/ragflow';
 
-
 // ==================== 知识库管理 ====================
 
 /**
@@ -286,23 +285,14 @@ export async function createSession(
 }
 
 // ==================== 智能对话（流式 SSE） ====================
+/** RAGFlow SSE 数据帧的外层包装结构（实际抓包确认） */
+interface RAGFlowSSEFrame {
+  code: number;
+  message?: string;
+  /** 数据帧时为 ChatCompletionData 对象；结束帧时为 true */
+  data: ChatCompletionData | true;
+}
 
-/**
- * 流式对话
- * POST /api/ragflow/chat-assistants/{chat_id}/completions
- * Body: ChatCompletionRequest（stream 固定为 true）
- *
- * 后端以 SSE 格式推送：
- *   data: {"answer":"...","session_id":"...","reference":{...},...}\n\n
- *   ...（多帧累积答案）
- *   data: {"code":0,"data":true}\n\n  ← 结束标志
- *
- * @param chatId      聊天助手 ID
- * @param body        请求体（question / session_id 等）
- * @param onChunk     每收到一帧答案数据时的回调
- * @param onDone      流结束时的回调
- * @param onError     出错时的回调
- */
 export async function streamChat(
   chatId: string,
   body: ChatCompletionRequest,
@@ -312,7 +302,7 @@ export async function streamChat(
 ): Promise<void> {
   try {
     const res = await fetch(
-      `${BASE}/chat-assistants/${chatId}/completions`,
+      `/api/ragflow/chat-assistants/${chatId}/completions`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -321,14 +311,14 @@ export async function streamChat(
     );
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: '对话请求失败' }));
-      throw new Error(err.detail ?? `对话请求失败: ${res.status}`);
+      const errText = await res.text().catch(() => '');
+      throw new Error(`对话请求失败 ${res.status}: ${errText}`);
     }
 
     const reader = res.body?.getReader();
     if (!reader) throw new Error('无法读取响应流');
 
-    const decoder = new TextDecoder();
+    const decoder = new TextDecoder('utf-8');
     let buffer = '';
 
     while (true) {
@@ -336,34 +326,37 @@ export async function streamChat(
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      // 保留最后一个不完整行继续拼接
-      buffer = lines.pop() ?? '';
 
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed.startsWith('data:')) continue;
+      // 按 \n\n 切分完整 SSE 事件块
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
 
-        const jsonStr = trimmed.slice(5).trim();
-        if (!jsonStr) continue;
+      for (const part of parts) {
+        for (const line of part.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
 
-        try {
-          const parsed = JSON.parse(jsonStr) as
-            | ChatCompletionData
-            | StreamEndFrame;
+          const jsonStr = trimmed.slice(5).trim();
+          if (!jsonStr) continue;
 
-          // 检测结束帧：{ code: 0, data: true }
-          if (
-            'data' in parsed &&
-            (parsed as StreamEndFrame).data === true
-          ) {
+          let frame: RAGFlowSSEFrame;
+          try {
+            frame = JSON.parse(jsonStr) as RAGFlowSSEFrame;
+          } catch {
+            continue;
+          }
+
+          // ✅ 结束帧：{ code:0, message:"", data:true }
+          if (frame.data === true) {
             onDone();
             return;
           }
 
-          onChunk(parsed as ChatCompletionData);
-        } catch {
-          // 忽略无法解析的行
+          // ✅ 数据帧：从 frame.data 中取 answer / session_id / reference
+          const inner = frame.data as ChatCompletionData;
+          if (inner && typeof inner.answer === 'string') {
+            onChunk(inner);
+          }
         }
       }
     }

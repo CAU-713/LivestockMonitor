@@ -1824,34 +1824,34 @@ export default function RAGFlowPage() {
       }}>
 
         {/* ── 页面标题 ── */}
-        <Box sx={{ mb: 3.5, display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-          <Box sx={{
-            width: 48, height: 48, borderRadius: 2.5,
-            background: 'linear-gradient(135deg, #1A2744 0%, #2D3F6B 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(26,39,68,0.22)',
-            flexShrink: 0,
-          }}>
-            <AiIcon sx={{ color: 'white', fontSize: 26 }} />
-          </Box>
-          <Box>
-            <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: '-0.03em', color: 'text.primary' }}>
-              RAGFlow
-              <Box component="span" sx={{
-                ml: 1.5, fontSize: '0.65rem', fontWeight: 700,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-                background: 'linear-gradient(135deg, #C4963A 0%, #D4AA5A 100%)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                verticalAlign: 'middle',
-              }}>
-                智能问答
-              </Box>
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: '0.02em' }}>
-              基于深度文档理解的检索增强生成引擎
-            </Typography>
-          </Box>
-        </Box>
+        {/*<Box sx={{ mb: 3.5, display: 'flex', alignItems: 'flex-start', gap: 2 }}>*/}
+        {/*  <Box sx={{*/}
+        {/*    width: 48, height: 48, borderRadius: 2.5,*/}
+        {/*    background: 'linear-gradient(135deg, #1A2744 0%, #2D3F6B 100%)',*/}
+        {/*    display: 'flex', alignItems: 'center', justifyContent: 'center',*/}
+        {/*    boxShadow: '0 4px 16px rgba(26,39,68,0.22)',*/}
+        {/*    flexShrink: 0,*/}
+        {/*  }}>*/}
+        {/*    <AiIcon sx={{ color: 'white', fontSize: 26 }} />*/}
+        {/*  </Box>*/}
+        {/*  <Box>*/}
+        {/*    <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: '-0.03em', color: 'text.primary' }}>*/}
+        {/*      RAGFlow*/}
+        {/*      <Box component="span" sx={{*/}
+        {/*        ml: 1.5, fontSize: '0.65rem', fontWeight: 700,*/}
+        {/*        letterSpacing: '0.08em', textTransform: 'uppercase',*/}
+        {/*        background: 'linear-gradient(135deg, #C4963A 0%, #D4AA5A 100%)',*/}
+        {/*        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',*/}
+        {/*        verticalAlign: 'middle',*/}
+        {/*      }}>*/}
+        {/*        智能问答*/}
+        {/*      </Box>*/}
+        {/*    </Typography>*/}
+        {/*    <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: '0.02em' }}>*/}
+        {/*      基于深度文档理解的检索增强生成引擎*/}
+        {/*    </Typography>*/}
+        {/*  </Box>*/}
+        {/*</Box>*/}
 
         {/* ── 上下文面包屑 ── */}
         {(activeAssistant || activeSession) && (
