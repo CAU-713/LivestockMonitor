@@ -1,21 +1,13 @@
+# 轻量业务依赖 - 经常修改，独立缓存层
+# 大型依赖（ultralytics/torch/opencv 等）在 requirements-base.txt 中管理
 fastapi==0.121.0
 pydantic_settings==2.11.0
 python-dotenv==1.2.1
 uvicorn==0.38.0
-ultralytics==8.3.229
 psycopg2-binary==2.9.11
 sqlmodel==0.0.16
-opencv-python-headless==4.11.0.86
-ragflow-sdk==0.22.1
-numpy==1.26.4
-pandas==2.2.2
-openpyxl==3.1.2
 sqlalchemy==2.0.29
-matplotlib>=3.7.0
-seaborn>=0.12.0
-scipy>=1.10.0
-statsmodels>=0.14.0
-
+openpyxl==3.1.2
 requests==2.31.0
 python-multipart==0.0.6
 passlib[bcrypt]==1.7.4
