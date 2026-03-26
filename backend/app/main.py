@@ -32,7 +32,12 @@ app.add_middleware(
 # 在启动时创建数据库表
 @app.on_event("startup")
 async def on_startup():
-    create_db_and_tables();
+    create_db_and_tables()
+
+    # 迁移存量明文密码为 bcrypt 哈希（幂等操作，已加密的密码不会重复处理）
+    from app.utils.migrate_passwords import migrate_plain_passwords
+    DB_URL_FOR_MIGRATION = f"postgresql://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
+    migrate_plain_passwords(DB_URL_FOR_MIGRATION)
 
     # 获取配置参数
     base_data_dir = Path("/app/app/datas")  # Docker容器内的数据目录

@@ -11,8 +11,12 @@ from app.models.UserDO import UserDO
 from app.schemas.userDTO import UserCreateDTO, UserReadDTO, UserUpdateDTO
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select, SQLModel, Field
+from passlib.context import CryptContext
 
 router = APIRouter(prefix="/api/users", tags=["用户管理"])
+
+# 密码哈希上下文，使用 bcrypt 算法
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserLoginDTO(SQLModel):
@@ -37,7 +41,7 @@ def login_user(
     user = session.exec(select(UserDO).where(UserDO.name == login_data.name)).first()
     if not user:
         raise HTTPException(status_code=401, detail="用户名或密码错误")
-    if user.password != login_data.password:
+    if not pwd_context.verify(login_data.password, user.password):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     user.last_login = datetime.utcnow()
     session.add(user)
@@ -59,6 +63,8 @@ def login_user(
 @router.post("", response_model=UserReadDTO, summary="创建新用户")
 def create_user(user: UserCreateDTO, session: SessionDep) -> UserReadDTO:
     db_user = UserDO.model_validate(user)
+    # 对密码进行 bcrypt 哈希加密
+    db_user.password = pwd_context.hash(user.password)
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
@@ -88,6 +94,9 @@ def update_user(user_id: int, user: UserUpdateDTO, session: SessionDep) -> UserR
     if not db_user:
         raise HTTPException(status_code=404, detail="用户不存在")
     user_data = user.model_dump(exclude_unset=True)
+    # 如果更新数据中包含密码，则对新密码进行哈希加密
+    if "password" in user_data and user_data["password"]:
+        user_data["password"] = pwd_context.hash(user_data["password"])
     db_user.sqlmodel_update(user_data)
     session.add(db_user)
     session.commit()
