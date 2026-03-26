@@ -191,6 +191,7 @@ const LoginPage = () => {
 
             <Stack direction="row" spacing={1.5}>
               <Button
+                type="button"
                 fullWidth
                 variant="outlined"
                 color="primary"
@@ -200,6 +201,7 @@ const LoginPage = () => {
                 直接进入（访客）
               </Button>
               <Button
+                type="button"
                 fullWidth
                 variant="outlined"
                 sx={{
