@@ -527,7 +527,7 @@ const DataAnalysisPage = () => {
               <TabPanel value={tabValue} index={1}>
                 <Grid container spacing={3}>
                   {/* 相关矩阵热图 */}
-                  <Grid item xs={12} lg={8}>
+                  <Grid size={{ xs: 12, lg: 8 }}>
                     <Stack spacing={2}>
                       <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Typography variant="subtitle2" fontWeight={700}>Pearson 相关系数矩阵</Typography>
@@ -603,7 +603,7 @@ const DataAnalysisPage = () => {
                   </Grid>
 
                   {/* 显著相关对摘要 */}
-                  <Grid item xs={12} lg={4}>
+                  <Grid size={{ xs: 12, lg: 4 }}>
                     <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2, height: '100%' }}>
                       <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
                         显著相关对（p ≤ {pThreshold}）
@@ -863,7 +863,7 @@ const DataAnalysisPage = () => {
 
                           {/* 指标表格 */}
                           <Grid container spacing={2}>
-                            <Grid item xs={12} md={5}>
+                            <Grid size={{ xs: 12, md: 5 }}>
                               <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                                 <Table size="small">
                                   <TableHead>
@@ -888,7 +888,7 @@ const DataAnalysisPage = () => {
                                 </Table>
                               </TableContainer>
                             </Grid>
-                            <Grid item xs={12} md={7}>
+                            <Grid size={{ xs: 12, md: 7 }}>
                               <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                                 <Table size="small">
                                   <TableHead>
@@ -936,7 +936,7 @@ const DataAnalysisPage = () => {
                   {!reportText ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 8, borderRadius: 2, border: '2px dashed', borderColor: 'divider' }}>
                       <ArticleIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                      <Typography color="text.secondary">点击"生成报表"按钮生成分析报告</Typography>
+                      <Typography color="text.secondary">点击&ldquo;生成报表&rdquo;按钮生成分析报告</Typography>
                     </Box>
                   ) : (
                     <Stack spacing={1.5}>

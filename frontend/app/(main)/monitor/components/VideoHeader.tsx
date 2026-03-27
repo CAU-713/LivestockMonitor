@@ -76,9 +76,7 @@ export default function VideoHeader({
           视频段:
         </Typography>
         <Typography variant='body2' fontWeight={500}>
-          {selectedCamera
-            ? getVideoSegmentName(selectedCamera.name)
-            : (selectedCamera?.id ?? '-')}
+          {selectedCamera ? getVideoSegmentName(selectedCamera.name) : '-'}
         </Typography>
 
         <div>

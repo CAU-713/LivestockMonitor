@@ -146,7 +146,7 @@ const HistoricalEnvironmentalDataPage = () => {
         if (results.length > 0) {
           const chartItems: MergedChartData[] = results.map((item, idx) => ({
             title: item.sensorName,
-            sensorType: item.sensorType,
+            sensorType: item.sensorType as MergedChartData['sensorType'],
             unit: item.unit || getUnit(item.sensorType),
             lines: [{ dataKey: 'value', name: item.sensorName, color: getColor(idx) }],
             data: item.data.map((d) => ({ time: dayjs(d.time).format('HH:mm'), value: d.value })),

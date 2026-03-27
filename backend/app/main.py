@@ -22,6 +22,8 @@ app.add_middleware(
         "http://localhost:3000",  # Next.js 默认端口
         "http://127.0.0.1:3000",
         "http://localhost:8080",
+        "http://120.53.24.48:3000",  # 服务器前端地址
+        "http://120.53.24.48:8000",  # 服务器后端地址
     ],
     allow_credentials=True,
     allow_methods=["*"],  # 允许所有 HTTP 方法
@@ -43,7 +45,7 @@ async def on_startup():
     base_data_dir = Path("/app/app/datas")  # Docker容器内的数据目录
     csv_file_path = base_data_dir / "企业育肥环境数据.csv"
     excel_file_path = base_data_dir / "envs.xlsx"
-    DB_URL = "postgresql://postgres:password@db:5432/postgres_db_name"
+    DB_URL = settings.database_url
     shed_id = 9999
 
     # 创建线程执行数据导入任务

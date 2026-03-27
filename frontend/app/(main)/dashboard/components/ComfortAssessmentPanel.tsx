@@ -77,4 +77,3 @@ const ComfortAssessmentPanel: React.FC<ComfortAssessmentPanelProps> = ({ assessm
 };
 
 export default ComfortAssessmentPanel;
-export type { ComfortAssessment };
