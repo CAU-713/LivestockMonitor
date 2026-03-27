@@ -72,17 +72,14 @@ services:
    build:
      context: ./frontend
      args:
-       # Frontend will now make requests to the same domain through Caddy
-       NEXT_PUBLIC_BACKEND_URL: ${BACKEND_URL}
+       # NEXT_PUBLIC_BACKEND_URL：浏览器直接访问后端（外网地址），从 .env 中读取
+       NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+       # BACKEND_URL：Next.js 服务端 rewrites 代理到后端（Docker 内网地址，固定不变）
+       BACKEND_URL: http://backend:8000
    restart: always
    # Remove external port mapping since Caddy will handle it
    ports:
      - "3000:3000"
-   env_file:
-     - ./.env
-   environment:
-     - BACKEND_URL=${BACKEND_URL} # this defines the URL the frontend makes requests to
-     - NEXT_PUBLIC_BACKEND_URL=${BACKEND_URL}
    depends_on:
      - backend
 
