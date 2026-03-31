@@ -21,13 +21,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs, { Dayjs } from 'dayjs';
 
 import LineChart from '@/components/charts/LineChart';
-import {
-  mockSheds as fallbackSheds,
-  mockSensors as fallbackSensors,
-  mockHourlyChartData,
-  mockDailyChartData,
-  mockSensorRecords,
-} from '@/constants/mockData';
+import { mockSheds as fallbackSheds, mockSensors as fallbackSensors } from '@/constants/mockData';
 import {
   Sensor,
   Shed,
@@ -36,7 +30,7 @@ import {
   YAxisConfig,
   ChartLine,
 } from '@/types';
-import { shedApi, sensorApi, historyApi } from '@/lib/api/apiService';
+import { shedApi, sensorApi, historyApi, SensorHistoryResult } from '@/lib/api/apiService';
 
 type Granularity = 'moment' | 'hour' | 'day';
 type MergeMode = 'none' | 'type' | 'shed';
@@ -59,6 +53,18 @@ const getUnit = (type: string): string => {
   }
 };
 
+// 根据粒度格式化时间标签
+const formatTimeLabel = (time: string, granularity: Granularity): string => {
+  const d = dayjs(time);
+  if (!d.isValid()) return time;
+  switch (granularity) {
+    case 'moment': return d.format('MM-DD HH:mm');
+    case 'hour':   return d.format('MM-DD HH:00');
+    case 'day':    return d.format('MM-DD');
+    default:       return time;
+  }
+};
+
 const HistoricalEnvironmentalDataPage = () => {
   const [sheds, setSheds] = useState<Shed[]>(fallbackSheds);
   const [sensors, setSensors] = useState<Sensor[]>(fallbackSensors);
@@ -66,10 +72,11 @@ const HistoricalEnvironmentalDataPage = () => {
   const [selectedShedId, setSelectedShedId] = useState<string>('all');
   const [selectedSensorTypes, setSelectedSensorTypes] = useState<Sensor['type'][]>(['Temperature']);
   const [granularity, setGranularity] = useState<Granularity>('day');
-  const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(30, 'day'));
+  const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(7, 'day'));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
   const [mergeMode, setMergeMode] = useState<MergeMode>('none');
-  const [apiChartData, setApiChartData] = useState<MergedChartData[] | null>(null);
+  // 原始 API 数据，所有粒度都用这个
+  const [apiResults, setApiResults] = useState<SensorHistoryResult[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
 
   // 加载 sheds + sensors
@@ -100,7 +107,10 @@ const HistoricalEnvironmentalDataPage = () => {
     if (newGranularity !== null) {
       setGranularity(newGranularity);
       if (newGranularity === 'day') {
-        setStartDate(dayjs().subtract(30, 'day'));
+        setStartDate(dayjs().subtract(7, 'day'));
+        setEndDate(dayjs());
+      } else if (newGranularity === 'hour') {
+        setStartDate(dayjs().subtract(3, 'day'));
         setEndDate(dayjs());
       } else {
         setStartDate(dayjs().subtract(24, 'hour'));
@@ -122,151 +132,147 @@ const HistoricalEnvironmentalDataPage = () => {
     [availableSensors]
   );
 
-  // 当粒度为「时刻」时，尝试从后端获取数据
+  // ============================================================
+  // 核心修复：所有粒度（时刻/小时/天）统一调用 API
+  // ============================================================
   useEffect(() => {
-    if (granularity !== 'moment' || !startDate || !endDate) {
-      setApiChartData(null);
-      return;
-    }
+    if (!startDate || !endDate) return;
+
     const fetchHistory = async () => {
       setApiLoading(true);
+      setApiResults([]);
       try {
         const shedIds = selectedShedId === 'all'
           ? sheds.map((s) => parseInt(s.id)).filter(Boolean)
           : [parseInt(selectedShedId)].filter(Boolean);
+
+        // granularity 映射到后端参数
+        const backendGranularity = granularity === 'moment' ? 'raw' : granularity; // 'hour' | 'day' | 'raw'
 
         const results = await historyApi.getSensorHistory({
           shed_ids: shedIds.length ? shedIds : undefined,
           sensor_types: selectedSensorTypes as string[],
           start: startDate.toISOString(),
           end: endDate.toISOString(),
-          granularity: 'raw',
+          granularity: backendGranularity as 'raw' | 'hour' | 'day',
         });
 
-        if (results.length > 0) {
-          const chartItems: MergedChartData[] = results.map((item, idx) => ({
-            title: item.sensorName,
-            sensorType: item.sensorType as MergedChartData['sensorType'],
-            unit: item.unit || getUnit(item.sensorType),
-            lines: [{ dataKey: 'value', name: item.sensorName, color: getColor(idx) }],
-            data: item.data.map((d) => ({ time: dayjs(d.time).format('HH:mm'), value: d.value })),
-          }));
-          setApiChartData(chartItems);
-        } else {
-          setApiChartData(null);
-        }
+        setApiResults(results);
       } catch (e) {
-        console.warn('History API failed, using mock data', e);
-        setApiChartData(null);
+        console.warn('History API failed:', e);
+        setApiResults([]);
       } finally {
         setApiLoading(false);
       }
     };
+
     fetchHistory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [granularity, startDate, endDate, selectedShedId, selectedSensorTypes]);
+  }, [granularity, startDate, endDate, selectedShedId, selectedSensorTypes, sheds]);
 
-  // 计算最终 chartData：若有 API 数据（时刻模式）则用 API 数据，否则 fallback mock
+  // ============================================================
+  // 将 API 数据转换为图表格式，支持三种合并模式
+  // ============================================================
   const chartData = useMemo((): MergedChartData[] => {
-    // 时刻模式：优先用 API 数据
-    if (granularity === 'moment') {
-      if (apiChartData && apiChartData.length > 0) {
-        return apiChartData;
-      }
-      // API 无数据时 fallback 到 mock
-      const sensorRecords = mockSensorRecords.filter(
-        (record) =>
-          dayjs(record.timestamp).isAfter(startDate) &&
-          dayjs(record.timestamp).isBefore(endDate)
-      );
-      const selectedSensorsForMoment = availableSensors.filter((s) =>
-        selectedSensorTypes.includes(s.type)
-      );
-      return selectedSensorsForMoment.map((sensor) => ({
-        title: sensor.name,
-        sensorType: sensor.type,
-        unit: getUnit(sensor.type),
-        lines: [{ dataKey: 'value', name: sensor.name, color: getColor(0) }],
-        data: sensorRecords
-          .filter((r) => r.sensorId === sensor.id)
-          .map((r) => ({
-            time: dayjs(r.timestamp).format('HH:mm'),
-            value: r.value,
-          })),
+    if (apiResults.length === 0) return [];
+
+    // 格式化时间标签
+    const formatResult = (item: SensorHistoryResult): MergedChartData => ({
+      title: item.sensorName,
+      sensorType: item.sensorType as MergedChartData['sensorType'],
+      unit: item.unit || getUnit(item.sensorType),
+      lines: [{ dataKey: 'value', name: item.sensorName, color: getColor(0) }],
+      data: item.data.map((d) => ({
+        time: formatTimeLabel(d.time, granularity),
+        value: d.value,
+      })),
+    });
+
+    if (mergeMode === 'none') {
+      // 不合并：每个传感器单独一张图
+      return apiResults.map((item, idx) => ({
+        ...formatResult(item),
+        lines: [{ dataKey: 'value', name: item.sensorName, color: getColor(idx) }],
       }));
     }
 
-    // 小时/天粒度：使用 mock 数据
-    const selectedSensors = availableSensors.filter((s) =>
-      selectedSensorTypes.includes(s.type)
-    );
-    if (selectedSensors.length === 0) return [];
-
-    let sourceData: MergedChartData[] = [];
-    let titleSuffix = '';
-    switch (granularity) {
-      case 'day': sourceData = mockDailyChartData; titleSuffix = ' (Daily Avg)'; break;
-      case 'hour': sourceData = mockHourlyChartData; titleSuffix = ' (Hourly Avg)'; break;
-      default: return [];
-    }
-
-    const relevantAggregatedData = sourceData.filter((d) => {
-      const sensorId =
-        d.lines[0]?.dataKey === 'value'
-          ? sensors.find((s) => s.name === d.title)?.id
-          : null;
-      return (
-        selectedSensors.some((s) => s.name === d.title || s.id === sensorId) &&
-        selectedSensorTypes.includes(d.sensorType as Sensor['type'])
-      );
-    });
-
     if (mergeMode === 'type') {
-      return selectedSensorTypes.map((type): MergedChartData | null => {
-        const dataOfType = relevantAggregatedData.filter((d) => d.sensorType === type);
-        if (dataOfType.length === 0) return null;
-        const dataMap = new Map<string, ChartDataPoint>();
-        const newLines: { dataKey: string; name: string; color: string }[] = [];
-        dataOfType.forEach((chart) => {
-          const sId = sensors.find((s) => s.name === chart.title)?.id || chart.title;
-          if (!newLines.some((l) => l.dataKey === sId)) {
-            newLines.push({ dataKey: sId, name: chart.title, color: getColor(newLines.length) });
-          }
-          chart.data.forEach((point) => {
-            if (!dataMap.has(point.time)) dataMap.set(point.time, { time: point.time });
-            dataMap.get(point.time)![sId] = (point as any).value;
-          });
-        });
-        return { title: `${type} Sensors${titleSuffix}`, sensorType: type, unit: getUnit(type), lines: newLines, data: Array.from(dataMap.values()).sort((a, b) => a.time.localeCompare(b.time)) };
-      }).filter((d): d is MergedChartData => d !== null);
-    } else if (mergeMode === 'shed') {
-      const shedIds = Array.from(new Set(selectedSensors.map((s) => s.shedId)));
-      return shedIds.map((shedId): MergedChartData | null => {
-        const sensorsInShed = selectedSensors.filter((s) => s.shedId === shedId);
-        const shedName = sheds.find((s) => s.id === shedId)?.name || shedId;
-        const dataForShed = relevantAggregatedData.filter((d) => sensorsInShed.some((s) => s.name === d.title));
-        if (dataForShed.length === 0) return null;
-        const typesInShed = Array.from(new Set(dataForShed.map((d) => d.sensorType)));
-        const yAxes: YAxisConfig[] = typesInShed.map((type, index) => ({ id: type as string, unit: getUnit(type), orientation: index % 2 === 0 ? 'left' : 'right', color: getColor(index) }));
+      // 按类型合并：同类型传感器合到一张图，多条折线
+      const typeMap = new Map<string, SensorHistoryResult[]>();
+      apiResults.forEach((item) => {
+        if (!typeMap.has(item.sensorType)) typeMap.set(item.sensorType, []);
+        typeMap.get(item.sensorType)!.push(item);
+      });
+
+      return Array.from(typeMap.entries()).map(([type, items]) => {
         const dataMap = new Map<string, ChartDataPoint>();
         const newLines: ChartLine[] = [];
-        dataForShed.forEach((chart) => {
-          const sensor = sensorsInShed.find((s) => s.name === chart.title);
-          if (!sensor) return;
-          if (!newLines.some((l) => l.dataKey === sensor.id)) {
-            newLines.push({ dataKey: sensor.id, name: sensor.name, color: getColor(newLines.length), yAxisId: sensor.type });
-          }
-          chart.data.forEach((point) => {
-            if (!dataMap.has(point.time)) dataMap.set(point.time, { time: point.time });
-            dataMap.get(point.time)![sensor.id] = (point as any).value;
+
+        items.forEach((item, idx) => {
+          const key = item.sensorId;
+          newLines.push({ dataKey: key, name: item.sensorName, color: getColor(idx) });
+          item.data.forEach((d) => {
+            const t = formatTimeLabel(d.time, granularity);
+            if (!dataMap.has(t)) dataMap.set(t, { time: t });
+            dataMap.get(t)![key] = d.value;
           });
         });
-        return { title: `${shedName} Overview${titleSuffix}`, sensorType: 'Mixed', yAxes, lines: newLines, data: Array.from(dataMap.values()).sort((a, b) => a.time.localeCompare(b.time)) };
-      }).filter((d): d is MergedChartData => d !== null);
-    } else {
-      return relevantAggregatedData;
+
+        return {
+          title: `${type} 传感器（按类型合并）`,
+          sensorType: type as MergedChartData['sensorType'],
+          unit: getUnit(type),
+          lines: newLines,
+          data: Array.from(dataMap.values()).sort((a, b) => a.time.localeCompare(b.time)),
+        };
+      });
     }
-  }, [availableSensors, sensors, sheds, selectedSensorTypes, granularity, startDate, endDate, mergeMode, apiChartData]);
+
+    if (mergeMode === 'shed') {
+      // 按舍合并：同棚舍的传感器合到一张图，多坐标轴
+      const shedMap = new Map<string, SensorHistoryResult[]>();
+      apiResults.forEach((item) => {
+        const sensor = sensors.find((s) => s.id === item.sensorId);
+        const shedId = sensor?.shedId ?? 'unknown';
+        if (!shedMap.has(shedId)) shedMap.set(shedId, []);
+        shedMap.get(shedId)!.push(item);
+      });
+
+      return Array.from(shedMap.entries()).map(([shedId, items]) => {
+        const shedName = sheds.find((s) => s.id === shedId)?.name ?? shedId;
+        const types = Array.from(new Set(items.map((i) => i.sensorType)));
+        const yAxes: YAxisConfig[] = types.map((type, idx) => ({
+          id: type,
+          unit: getUnit(type),
+          orientation: idx % 2 === 0 ? 'left' : 'right',
+          color: getColor(idx),
+        }));
+
+        const dataMap = new Map<string, ChartDataPoint>();
+        const newLines: ChartLine[] = [];
+
+        items.forEach((item, idx) => {
+          const key = item.sensorId;
+          newLines.push({ dataKey: key, name: item.sensorName, color: getColor(idx), yAxisId: item.sensorType });
+          item.data.forEach((d) => {
+            const t = formatTimeLabel(d.time, granularity);
+            if (!dataMap.has(t)) dataMap.set(t, { time: t });
+            dataMap.get(t)![key] = d.value;
+          });
+        });
+
+        return {
+          title: `${shedName}（按舍合并）`,
+          sensorType: 'Mixed' as MergedChartData['sensorType'],
+          yAxes,
+          lines: newLines,
+          data: Array.from(dataMap.values()).sort((a, b) => a.time.localeCompare(b.time)),
+        };
+      });
+    }
+
+    return [];
+  }, [apiResults, granularity, mergeMode, sensors, sheds]);
 
   // Export CSV with UTF-8 BOM for Excel compatibility
   const handleExportCSV = () => {

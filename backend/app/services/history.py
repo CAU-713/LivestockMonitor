@@ -153,7 +153,7 @@ class SensorHistoryService:
             SELECT 
                 date_trunc('hour', timestamp) as hour,
                 AVG(value) as avg_value
-            FROM sensor_data
+            FROM sensor_record
             WHERE sensor_id = :sensor_id
                 AND (:start IS NULL OR timestamp >= :start)
                 AND (:end IS NULL OR timestamp <= :end)
@@ -205,7 +205,7 @@ class SensorHistoryService:
             SELECT 
                 date_trunc('day', timestamp) as day,
                 AVG(value) as avg_value
-            FROM sensor_data
+            FROM sensor_record
             WHERE sensor_id = :sensor_id
                 AND (:start IS NULL OR timestamp >= :start)
                 AND (:end IS NULL OR timestamp <= :end)
