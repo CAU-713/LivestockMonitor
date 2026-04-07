@@ -23,21 +23,18 @@ services:
       start_period: 30s
     env_file:
       - ./.env
-    # The ports section is commented out for better security in production.
-    # The 'backend' service can still connect to 'db' via Docker's internal network.
-    # Uncomment it only if you need to connect to the DB from your host machine for debugging.
-    ports:
-      - "5432:5432"
+    # 5432 端口不对外暴露！后端通过 Docker 内网（服务名 'db'）连接
+    # 如需本地调试，临时取消注释下面两行，调试完立即注释回来
+    # ports:
+    #   - "5432:5432"
 
   redis:
     image: redis:alpine
     container_name: redis_cache
     restart: always
-    # The ports section is commented out for better security in production.
-    # Uncomment it only if you need to connect to Redis from your host machine for debugging.
-    # The 'backend' service can still connect to 'redis' via Docker's internal network
-    ports:
-      - "6379:6379"
+    # 6379 端口不对外暴露！后端通过 Docker 内网连接
+    # ports:
+    #   - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -78,9 +75,11 @@ services:
        # BACKEND_URL：Next.js 服务端 rewrites 代理到后端（Docker 内网地址，固定不变）
        BACKEND_URL: http://backend:8000
    restart: always
-   # Remove external port mapping since Caddy will handle it
    ports:
      - "3000:3000"
+   # 限制内存上限，防止 Next.js 内存泄漏导致 OOM 崩溃
+   mem_limit: 800m
+   memswap_limit: 1200m
    depends_on:
      - backend
 
