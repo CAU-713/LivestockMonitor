@@ -116,17 +116,28 @@ class DataAnalysisService:
         outlier_count = len(outlier_indices)
 
         # 用前后均值替换
+        # 注意：get_loc 在索引有重复值时返回 slice 而非 int，需用 get_indexer 获取所有整数位置
+        outlier_positions = []
         for idx in outlier_indices:
-            idx_pos = self.df.index.get_loc(idx)
+            loc = self.df.index.get_loc(idx)
+            if isinstance(loc, slice):
+                # 重复时间戳：取该 slice 内所有位置
+                outlier_positions.extend(range(*loc.indices(len(self.df))))
+            elif isinstance(loc, np.ndarray):
+                outlier_positions.extend(np.where(loc)[0].tolist())
+            else:
+                outlier_positions.append(int(loc))
+
+        for idx_pos in outlier_positions:
             prev_val = self.df[col].iloc[idx_pos - 1] if idx_pos > 0 else np.nan
             next_val = self.df[col].iloc[idx_pos + 1] if idx_pos < len(self.df) - 1 else np.nan
 
             if pd.notna(prev_val) and pd.notna(next_val):
-                self.df.loc[idx, col] = (prev_val + next_val) / 2
+                self.df[col].iloc[idx_pos] = (prev_val + next_val) / 2
             elif pd.notna(prev_val):
-                self.df.loc[idx, col] = prev_val
+                self.df[col].iloc[idx_pos] = prev_val
             elif pd.notna(next_val):
-                self.df.loc[idx, col] = next_val
+                self.df[col].iloc[idx_pos] = next_val
 
         return outlier_count
 
