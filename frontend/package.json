@@ -18,7 +18,7 @@
     "@mui/x-date-pickers": "^8.19.0",
     "dayjs": "^1.11.19",
     "hls.js": "^1.6.15",
-    "next": "15.3.4",
+    "next": "15.3.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.4.1"
@@ -29,7 +29,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "9.39.1",
-    "eslint-config-next": "15.3.4",
+    "eslint-config-next": "15.3.6",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
