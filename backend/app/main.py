@@ -41,12 +41,21 @@ app.add_middleware(
 async def on_startup():
     create_db_and_tables();
 
-    # 获取配置参数
-    base_data_dir = Path("/app/app/datas")  # Docker容器内的数据目录
+    # 获取配置参数 - 使用相对路径自动适配不同环境
+    base_data_dir = Path(__file__).parent / "datas"
     csv_file_path = base_data_dir / "企业育肥环境数据.csv"
     excel_file_path = base_data_dir / "envs.xlsx"
-    DB_URL = "postgresql://postgres:password@db:5432/postgres_db_name"
-    shed_id = 9999
+
+    # 检查文件是否存在
+    if not csv_file_path.exists():
+        print(f"警告: CSV 文件不存在 - {csv_file_path}")
+        print("跳过企业育肥环境数据导入")
+    elif not excel_file_path.exists():
+        print(f"警告: Excel 文件不存在 - {excel_file_path}")
+        print("跳过综合环境数据导入")
+    else:
+        DB_URL = settings.database_url
+        shed_id = 9999
 
     # 创建线程执行数据导入任务
     def run_data_import():

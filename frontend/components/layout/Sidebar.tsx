@@ -138,6 +138,13 @@ const Sidebar = () => {
           <ListItemText primary="智能问答" />
         </ListItemButton>
 
+        <ListItemButton component={Link} href="/ragflow/agent">
+          <ListItemIcon>
+            <ChatIcon />
+          </ListItemIcon>
+          <ListItemText primary="Agent" />
+        </ListItemButton>
+
       </List>
       <Divider />
       <List>
