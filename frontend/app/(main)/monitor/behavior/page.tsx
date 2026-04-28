@@ -1,7 +1,7 @@
 // app/(main)/monitor/behavior/page.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Paper, Stack, Typography } from '@mui/material';
+import { Box, Container, Paper, Stack, Typography, Skeleton } from '@mui/material';
 
 import { mockSheds, mockCameras } from '../../../../constants/mockData';
 
@@ -9,7 +9,8 @@ import CameraHeader from '../components/CameraHeader';
 import VideoPlayer from '../components/VideoPlayer';
 import BehaviorSummaryPanel from '../components/BehaviorSummaryPanel';
 
-// types removed (no longer needed in this file)
+import { cameraApi, behaviorApi } from '@/lib/api/apiService';
+import type { Camera, BehaviorSummary } from '@/types';
 
 const defaultShed = mockSheds?.[0] ?? null;
 const defaultCamera =
@@ -21,10 +22,15 @@ const BehaviorPage = () => {
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(
     defaultCamera?.id ?? null
   );
+  const [realCameras, setRealCameras] = useState<Camera[]>([]);
 
   const [currentTime, setCurrentTime] = useState<string>(() =>
     new Date().toLocaleString()
   );
+
+  // 真实行为数据
+  const [behaviorSummary, setBehaviorSummary] = useState<BehaviorSummary | null>(null);
+  const [behaviorLoading, setBehaviorLoading] = useState(false);
 
   useEffect(() => {
     const t = setInterval(
@@ -34,8 +40,50 @@ const BehaviorPage = () => {
     return () => clearInterval(t);
   }, []);
 
+  // 加载真实摄像头列表
+  useEffect(() => {
+    cameraApi.getCameras().then((cams) => {
+      setRealCameras(cams);
+      // 如果当前选中的是 mock 摄像头，切换到第一个真实摄像头
+      if (cams.length > 0 && !selectedCameraId) {
+        setSelectedCameraId(cams[0].id);
+      }
+    }).catch(console.error);
+  }, []);
+
+  // 使用真实摄像头或 mock 摄像头
+  const cameraList = realCameras.length > 0 ? realCameras : mockCameras;
+
   const selectedCamera =
-    mockCameras.find((c) => c.id === selectedCameraId) ?? defaultCamera;
+    cameraList.find((c) => c.id === selectedCameraId) ?? defaultCamera;
+
+  // 加载真实行为数据
+  useEffect(() => {
+    if (!selectedCameraId) return;
+    const numericId = Number(selectedCameraId);
+    if (!numericId || numericId <= 0) return;
+
+    setBehaviorLoading(true);
+    behaviorApi.getLatest(numericId)
+      .then((data) => {
+        if (data) {
+          setBehaviorSummary({
+            id: String(data.id || 0),
+            cameraId: String(data.camera_id),
+            timestamp: data.timestamp,
+            eatingCount: data.eating_count,
+            drinkingCount: data.drinking_count,
+            lickingCount: data.licking_count,
+            standingCount: data.standing_count,
+            lyingCount: data.lying_count,
+          });
+        }
+      })
+      .catch(() => {
+        // API 失败时保持 mock 数据
+      })
+      .finally(() => setBehaviorLoading(false));
+  }, [selectedCameraId]);
 
   // Prepare displayed video source: hide specific picsum sample image
   const displayedSource = (() => {
@@ -44,6 +92,18 @@ const BehaviorPage = () => {
     if (src.includes('picsum.photos/seed/cam-a-01/400/300')) return '-';
     return src;
   })();
+
+  // 如果有真实数据就用真实数据，否则用 mock 数据
+  const displaySummary = behaviorSummary || {
+    id: 'real-time-1',
+    cameraId: selectedCameraId ?? '',
+    timestamp: new Date().toISOString(),
+    eatingCount: 6,
+    drinkingCount: 5,
+    lickingCount: 1,
+    standingCount: 12,
+    lyingCount: 8,
+  };
 
   return (
     <Container maxWidth='lg'>
@@ -63,7 +123,7 @@ const BehaviorPage = () => {
             >
               <CameraHeader
                 sheds={mockSheds}
-                cameras={mockCameras}
+                cameras={cameraList}
                 selectedCameraId={selectedCameraId}
                 onSelectCamera={(id) => setSelectedCameraId(id)}
               />
@@ -90,22 +150,17 @@ const BehaviorPage = () => {
               src={selectedCamera?.streamUrl ?? undefined}
             />
 
-            <BehaviorSummaryPanel
-              title={'实时行为概览'}
-              selectedCameraName={selectedCamera?.name ?? '-'}
-              latestTimestamp={currentTime}
-              formatDate={(iso) => iso || '-'}
-              summary={{
-                id: 'real-time-1',
-                cameraId: selectedCameraId ?? '',
-                timestamp: new Date().toISOString(),
-                eatingCount: 6,
-                drinkingCount: 5,
-                lickingCount: 1,
-                standingCount: 12,
-                lyingCount: 8,
-              }}
-            />
+            {behaviorLoading ? (
+              <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
+            ) : (
+              <BehaviorSummaryPanel
+                title={'实时行为概览'}
+                selectedCameraName={selectedCamera?.name ?? '-'}
+                latestTimestamp={currentTime}
+                formatDate={(iso) => iso || '-'}
+                summary={displaySummary}
+              />
+            )}
           </Stack>
         </Paper>
       </Stack>

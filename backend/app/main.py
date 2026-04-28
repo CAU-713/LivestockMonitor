@@ -1,8 +1,11 @@
 import importlib
 import os
+import json
+import asyncio
+from datetime import datetime
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings, create_db_and_tables
@@ -27,6 +30,62 @@ app.add_middleware(
 )
 
 
+# ─── WebSocket 告警推送 ────────────────────────────────────────
+
+# 全局连接管理器
+class AlertConnectionManager:
+    """管理 WebSocket 连接，用于实时告警推送"""
+
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast_alert(self, alert_data: dict):
+        """向所有连接的客户端推送告警消息"""
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(alert_data)
+            except Exception:
+                disconnected.append(connection)
+        for conn in disconnected:
+            self.disconnect(conn)
+
+
+alert_manager = AlertConnectionManager()
+
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts(websocket: WebSocket):
+    """
+    WebSocket 告警推送端点
+
+    前端连接后可实时接收告警消息。
+    消息格式: { "type": "alert", "data": { ... } }
+    心跳格式: { "type": "ping" } → 服务端回 { "type": "pong" }
+    """
+    await alert_manager.connect(websocket)
+    try:
+        while True:
+            # 接收客户端消息（心跳或业务消息）
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+                if msg.get("type") == "ping":
+                    await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
+            except json.JSONDecodeError:
+                pass
+    except WebSocketDisconnect:
+        alert_manager.disconnect(websocket)
+
+
 # 在启动时创建数据库表
 @app.on_event("startup")
 async def on_startup():
@@ -46,6 +105,7 @@ for filename in os.listdir(routers_dir):
         module = importlib.import_module(f".routers.{module_name}", package="app")
         if hasattr(module, "router"):
             app.include_router(module.router)
+
 
 if __name__ == "__main__":
     uvicorn.run(

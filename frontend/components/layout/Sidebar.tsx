@@ -25,8 +25,14 @@ import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import ChatIcon from '@mui/icons-material/Chat';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import StorageIcon from '@mui/icons-material/Storage';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import PetsIcon from '@mui/icons-material/Pets';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ChildCareIcon from '@mui/icons-material/ChildCare';
+import Badge from '@mui/material/Badge';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { alertApi } from '@/lib/api/apiService';
 
 const DRAWER_WIDTH = 240;
 
@@ -40,9 +46,24 @@ const Sidebar = () => {
   const pathname = usePathname();
   const [realtimeOpen, setRealtimeOpen] = React.useState(true);
   const [historyOpen, setHistoryOpen] = React.useState(true);
+  const [unresolvedAlerts, setUnresolvedAlerts] = React.useState(0);
 
   // 根据角色控制数据分析菜单项可见性
   const { isGuest } = useAuth();
+
+  // 加载未解决告警数量
+  React.useEffect(() => {
+    alertApi.getStats()
+      .then((s) => setUnresolvedAlerts(s.unresolved))
+      .catch(() => {});
+    // 每分钟刷新一次
+    const timer = setInterval(() => {
+      alertApi.getStats()
+        .then((s) => setUnresolvedAlerts(s.unresolved))
+        .catch(() => {});
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '?');
 
@@ -216,6 +237,32 @@ const Sidebar = () => {
             <ChatIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="智能问答" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/ragflow') ? 600 : 400 }} />
+        </ListItemButton>
+
+        {/* 告警中心 */}
+        <ListItemButton component={Link} href="/alerts" sx={menuItemSx('/alerts')}>
+          <ListItemIcon sx={iconSx('/alerts')}>
+            <Badge badgeContent={unresolvedAlerts || 0} color="error" max={99}>
+              <NotificationsActiveIcon fontSize="small" />
+            </Badge>
+          </ListItemIcon>
+          <ListItemText primary="告警中心" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/alerts') ? 600 : 400 }} />
+        </ListItemButton>
+
+        {/* 动物档案 */}
+        <ListItemButton component={Link} href="/animals" sx={menuItemSx('/animals')}>
+          <ListItemIcon sx={iconSx('/animals')}>
+            <PetsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="动物档案" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/animals') ? 600 : 400 }} />
+        </ListItemButton>
+
+        {/* 繁殖管理 */}
+        <ListItemButton component={Link} href="/breeding" sx={menuItemSx('/breeding')}>
+          <ListItemIcon sx={iconSx('/breeding')}>
+            <ChildCareIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="繁殖管理" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/breeding') ? 600 : 400 }} />
         </ListItemButton>
       </List>
 

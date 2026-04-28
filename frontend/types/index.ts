@@ -172,6 +172,75 @@ export interface AlertRule {
 }
 
 // =================================================================
+// Types for Alert Center
+// =================================================================
+
+/**
+ * @description Represents an alert record
+ */
+export interface Alert {
+  id: number;
+  shed_id: number;
+  shed_name?: string;
+  pen_id?: number;
+  severity: 'low' | 'medium' | 'high';
+  description: string;
+  alert_time: string; // ISO 8601
+  resolved: boolean;
+  resolved_by?: string;
+  resolve_time?: string;
+}
+
+export interface AlertStats {
+  total: number;
+  unresolved: number;
+  high: number;
+  medium: number;
+  low: number;
+  high_unresolved: number;
+  medium_unresolved: number;
+  low_unresolved: number;
+}
+
+// =================================================================
+// Types for Animal Management
+// =================================================================
+
+/**
+ * @description Represents a livestock animal record
+ */
+export interface AnimalRecord {
+  id: number;
+  name: string; // 编号
+  breed: string;
+  age: number; // months
+  gender: 'male' | 'female';
+  health_status: 'good' | 'ill' | 'under_treatment' | 'removal';
+  shed_id: number;
+  shed_name?: string;
+  current_pen_id?: number;
+  entry_date: string;
+  birth_date: string;
+  description?: string;
+  dam_id?: number;
+  sire_id?: string;
+  production_type: 'breeding' | 'fattening' | 'test';
+  breeding_status?: 'empty' | 'mated_wait' | 'pregnant' | 'perinatal' | 'lactation' | 'abortion';
+  delivery_date?: string;
+  mating_date?: string;
+}
+
+export interface AnimalStats {
+  total: number;
+  good: number;
+  ill: number;
+  under_treatment: number;
+  removal: number;
+  breeding_count: number;
+  fattening_count: number;
+}
+
+// =================================================================
 // Types for Data Analysis
 // =================================================================
 
