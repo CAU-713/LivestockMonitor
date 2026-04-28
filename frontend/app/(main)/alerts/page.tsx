@@ -311,8 +311,8 @@ export default function AlertsPage() {
                           />
                         </TableCell>
                         <TableCell>{alert.shed_name || `#${alert.shed_id}`}</TableCell>
-                        <TableCell sx={{ maxWidth: 300 }}>
-                          <Typography variant="body2" noWrap title={alert.description}>
+                        <TableCell sx={{ maxWidth: 400, minWidth: 200 }}>
+                          <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
                             {alert.description}
                           </Typography>
                         </TableCell>
