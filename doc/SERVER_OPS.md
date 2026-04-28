@@ -123,15 +123,27 @@ ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
 
 ### 重建后端
 
+> **⚠️ 重要**：后端镜像包含 torch + CUDA 依赖，约 8.65GB。首次构建（无缓存）需 5-8 分钟，
+> `timeout` 必须设 **600 秒以上**。如果磁盘空间不足（<10GB可用），构建会因 pip 安装失败。
+
 ```bash
 # 在本地：用 scp 上传后端代码到服务器
 scp -i ~/.ssh/id_ed25519 -r ./backend ubuntu@120.53.24.48:/root/LivestockMonitor/
 
+# 在服务器上构建并重启（timeout 必须 600+，首次构建很慢）
 ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
-  "timeout 120 bash -c 'cd /root/LivestockMonitor && sudo docker compose build backend 2>&1 | tail -10'"
+  "timeout 600 bash -c 'cd /root/LivestockMonitor && sudo docker compose build backend 2>&1 | tail -10'"
 
 ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
   "timeout 30 bash -c 'cd /root/LivestockMonitor && sudo docker compose up -d --force-recreate backend 2>&1'"
+```
+
+**如果构建因磁盘空间不足失败（`No space left on device`）**，先清理 Docker 缓存再重建：
+
+```bash
+ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
+  "timeout 60 sudo docker system prune -af 2>&1 | tail -5"
+# 之后再执行 build + up
 ```
 
 ### 紧急情况：镜像被入侵，必须用 --no-cache 重建
@@ -260,6 +272,33 @@ scp -i ~/.ssh/id_ed25519 ./db_init/01_schema_and_data.sql \
   ubuntu@120.53.24.48:/root/LivestockMonitor/db_init/01_schema_and_data.sql
 ```
 
+### 推荐：用 rsync 替代 scp 上传前端
+
+> 前端目录含 `node_modules`（数百MB）和 `.next`（构建缓存），scp 会全量上传。
+> 用 rsync 可以排除这些目录，只同步源代码，大幅提升上传速度。
+
+```bash
+# rsync 上传前端（排除 node_modules 和 .next）
+rsync -avz --delete --exclude='node_modules' --exclude='.next' \
+  -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10" \
+  ./frontend/ ubuntu@120.53.24.48:/root/LivestockMonitor/frontend/
+
+# rsync 上传后端（排除 __pycache__ 和 .venv）
+rsync -avz --delete --exclude='__pycache__' --exclude='.venv' \
+  -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10" \
+  ./backend/ ubuntu@120.53.24.48:/root/LivestockMonitor/backend/
+```
+
+### ⚠️ scp 权限问题
+
+> 服务器 `/root/` 目录默认属 `root:root`，`ubuntu` 用户无写权限。
+> 如果 scp 报 `Permission denied`，需先在服务器上修改目录权限：
+
+```bash
+ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
+  "timeout 10 sudo chown -R ubuntu:ubuntu /root/LivestockMonitor"
+```
+
 ---
 
 ## 安全加固记录（历史事件）
@@ -268,6 +307,7 @@ scp -i ~/.ssh/id_ed25519 ./db_init/01_schema_and_data.sql \
 |------|------|------|
 | 2026-04 | Postgres `5432` 暴露公网，被 ransomware 删库 | 删库+恢复数据+关闭端口映射 |
 | 2026-04-12 | 前端容器被入侵，植入挖矿木马（wget 176.65.139.42） | 删容器+删镜像+--no-cache 重建 |
+| 2026-04-28 | 后端构建因磁盘不足失败（No space left on device） | `docker system prune -af` 清理 17.6GB 旧镜像/cache 后重建成功 |
 
 **当前安全配置：**
 - ✅ `5432`（PostgreSQL）不对外暴露
@@ -278,6 +318,101 @@ scp -i ~/.ssh/id_ed25519 ./db_init/01_schema_and_data.sql \
 - 前端日志出现 `wget http://x.x.x.x/x86` 或 `Connecting to world...`
 - 数据库被删，只剩 `readme_to_recover` 数据库（勒索软件标志）
 - 后端大量 `OperationalError: database "postgres_db_name" does not exist`
+
+---
+
+## 部署踩坑记录
+
+### 1. 后端构建超时与磁盘空间
+
+**问题**：后端镜像含 torch + CUDA 依赖，约 8.65GB。首次无缓存构建需 5-8 分钟。
+- 原文档建议 `timeout 120` **远远不够**，必须设 `timeout 600+`
+- 构建日志中出现 `No space left on device` → pip 安装失败
+- 服务器磁盘 40GB，4个容器+旧镜像会占 30GB+，留给构建的可用空间可能不足
+
+**解决方案**：
+```bash
+# 先清理旧镜像和构建缓存（可回收 16GB+）
+ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
+  "timeout 60 sudo docker system prune -af 2>&1 | tail -5"
+# 再重建（timeout 600）
+ssh ... "timeout 600 bash -c 'cd /root/LivestockMonitor && sudo docker compose build backend 2>&1'"
+```
+
+**预防措施**：部署前先 `df -h /` 检查可用空间，低于 10GB 时先清理 Docker 缓存。
+
+### 2. scp 权限问题
+
+**问题**：服务器 `/root/` 目录默认属 `root:root`，`ubuntu` 用户 scp 上传时报 `Permission denied`。
+
+**解决方案**：
+```bash
+ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 ubuntu@120.53.24.48 \
+  "timeout 10 sudo chown -R ubuntu:ubuntu /root/LivestockMonitor"
+```
+
+### 3. 前端 rsync 比 scp 更高效
+
+**问题**：`scp -r ./frontend` 会全量上传 `node_modules`（数百MB）和 `.next`（构建缓存），浪费时间。
+
+**解决方案**：用 rsync 排除这些目录：
+```bash
+rsync -avz --delete --exclude='node_modules' --exclude='.next' \
+  -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10" \
+  ./frontend/ ubuntu@120.53.24.48:/root/LivestockMonitor/frontend/
+```
+
+---
+
+## 前端开发注意事项
+
+### MUI Grid 组件兼容性（重要）
+
+**问题**：本项目使用 Next.js 15 + MUI 6。MUI 6 的 `<Grid>` 组件已升级为新 API，
+不再支持 `item` / `xs` / `container` 等旧属性。直接使用会报类型错误：
+
+```
+Type error: No overload matches this call.
+Property 'item' does not exist on type ...
+```
+
+**解决方案**：必须使用 `GridLegacy` 组件：
+```tsx
+// ✅ 正确
+import Grid from '@mui/material/GridLegacy';
+<Grid container spacing={2}>
+  <Grid item xs={12}>...</Grid>
+</Grid>
+
+// ❌ 错误（MUI 6 不支持）
+import { Grid } from '@mui/material';
+<Grid container spacing={2}>
+  <Grid item xs={12}>...</Grid>
+</Grid>
+```
+
+**注意**：如果同一个文件中从 `@mui/material` 批量导入时包含了 `Grid`，
+同时又单独 `import Grid from '@mui/material/GridLegacy'`，
+会报 `Identifier 'Grid' has already been declared` 错误。
+需要从批量导入中移除 `Grid`，只保留 GridLegacy 的单独导入。
+
+### 后端路由自动注册机制
+
+**问题**：后端 `main.py` 通过自动发现 `routers/` 目录下的 `.py` 文件来注册路由，
+**不需要手动 import**。新增路由文件后，只要放到 `backend/app/routers/` 目录下，
+文件内有 `router = APIRouter(...)` 变量，就会自动被加载。
+
+**但也意味着**：修改 `main.py` 本身（如新增 WebSocket 端点）时，需要重建后端镜像。
+
+### WebSocket 告警推送端点
+
+**新增端点**：`/ws/alerts`（WebSocket 协议，非 HTTP）
+
+- 前端通过 `ws://120.53.24.48:8000/ws/alerts` 连接
+- 心跳格式：客户端发 `{ "type": "ping" }` → 服务端回 `{ "type": "pong" }`
+- 告警推送格式：服务端主动发 `{ "type": "alert", "data": { ... } }`
+- 自动重连：前端每 5 秒重试，每 30 秒心跳
+- 创建告警时（`POST /api/alerts`）会同步通过 WebSocket 推送到所有连接的客户端
 
 ---
 
@@ -297,9 +432,20 @@ scp -i ~/.ssh/id_ed25519 ./db_init/01_schema_and_data.sql \
   │         ├─ "OperationalError / connection refused" → postgres_db 容器不健康
   │         └─ 正常日志但 500 → 查具体接口逻辑
   │
-  └─ 后端正常，但数据为空？
-       └─ 检查 postgres_db 是否初始化
-            └─ 执行 db_init/01_schema_and_data.sql 重新导入数据
+  ├─ 后端正常，但数据为空？
+  │    └─ 检查 postgres_db 是否初始化
+  │         └─ 执行 db_init/01_schema_and_data.sql 重新导入数据
+  │
+  └─ docker compose build 失败？
+       ├─ "No space left on device" → 磁盘不足
+       │    └─ sudo docker system prune -af 清理旧镜像
+       │    └─ df -h / 确认可用空间 > 10GB 后再 build
+       │
+       ├─ 构建超时（timeout 120 不够）→ 后端需 timeout 600+
+       │    └─ 后端含 torch+CUDA，首次构建需 5-8 分钟
+       │
+       └─ scp "Permission denied" → 目录权限问题
+            └─ sudo chown -R ubuntu:ubuntu /root/LivestockMonitor
 ```
 
 ---
