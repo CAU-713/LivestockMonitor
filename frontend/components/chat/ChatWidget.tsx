@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { chatService } from './chatService';
 import { welcomeChatResponse } from '@/constants/mockData';
 
@@ -17,12 +17,115 @@ interface Message {
 }
 
 export default function ChatWidget() {
+  const CHAT_WIDTH = 420;
+  const CHAT_HEIGHT = 600;
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+
+  // ── 可拖动定位 ──────────────────────────────────
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const hasMoved = useRef(false);
+
+  // 初始化位置（右下角）
+  useEffect(() => {
+    setPosition({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
+    setChatPos({
+      x: Math.max(0, window.innerWidth - 420),
+      y: Math.max(0, window.innerHeight - 600),
+    });
+  }, []);
+
+  // 聊天窗口跟随按钮位置
+  useEffect(() => {
+    setChatPos({
+      x: Math.max(0, Math.min(window.innerWidth - CHAT_WIDTH, position.x - CHAT_WIDTH + 56)),
+      y: Math.max(0, Math.min(window.innerHeight - CHAT_HEIGHT, position.y - CHAT_HEIGHT)),
+    });
+  }, [position, CHAT_WIDTH, CHAT_HEIGHT]);
+
+  const handleDragStart = useCallback((clientX: number, clientY: number) => {
+    setIsDragging(true);
+    hasMoved.current = false;
+    dragOffset.current = {
+      x: clientX - position.x,
+      y: clientY - position.y,
+    };
+    dragStartPos.current = { x: clientX, y: clientY };
+  }, [position]);
+
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging) return;
+    const dx = clientX - dragStartPos.current.x;
+    const dy = clientY - dragStartPos.current.y;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasMoved.current = true;
+    }
+    const newX = Math.max(0, Math.min(window.innerWidth - 56, clientX - dragOffset.current.x));
+    const newY = Math.max(0, Math.min(window.innerHeight - 56, clientY - dragOffset.current.y));
+    setPosition({ x: newX, y: newY });
+  }, [isDragging]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Mouse events
+  const onMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDragStart(e.clientX, e.clientY);
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => handleDragMove(e.clientX, e.clientY);
+    const onMouseUp = () => handleDragEnd();
+    if (isDragging) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  // Touch events
+  const onTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleDragStart(touch.clientX, touch.clientY);
+  };
+
+  useEffect(() => {
+    const onTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      handleDragMove(touch.clientX, touch.clientY);
+    };
+    const onTouchEnd = () => handleDragEnd();
+    if (isDragging) {
+      window.addEventListener('touchmove', onTouchMove);
+      window.addEventListener('touchend', onTouchEnd);
+    }
+    return () => {
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  // 点击打开聊天（仅在未拖动时触发）
+  const handleButtonClick = () => {
+    if (!hasMoved.current) {
+      setIsOpen(true);
+    }
+  };
+
+  // ── 聊天逻辑 ──────────────────────────────────
 
   // 自动滚动到最新消息
   const scrollToBottom = () => {
@@ -38,8 +141,7 @@ export default function ChatWidget() {
     const initSession = async () => {
       const id = await chatService.createSession();
       setSessionId(id);
-      
-      // 添加欢迎消息
+
       const welcomeMessage: Message = {
         id: `welcome-${Date.now()}`,
         type: 'assistant',
@@ -58,7 +160,6 @@ export default function ChatWidget() {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
-    // 添加用户消息
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -71,10 +172,7 @@ export default function ChatWidget() {
     setIsLoading(true);
 
     try {
-      // 调用聊天服务
       const response = await chatService.sendMessage(inputValue, sessionId || '');
-
-      // 添加助手响应
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -82,11 +180,9 @@ export default function ChatWidget() {
         timestamp: new Date(),
         references: response.references,
       };
-
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('发送消息失败:', error);
-      // 添加错误消息
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -99,7 +195,6 @@ export default function ChatWidget() {
     }
   };
 
-  // 处理键盘事件
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -107,40 +202,48 @@ export default function ChatWidget() {
     }
   };
 
+  const [chatPos, setChatPos] = useState({ x: 0, y: 0 });
+
   return (
     <>
-      {/* 浮窗按钮 */}
+      {/* 浮窗按钮 - 可拖动 */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          title="打开聊天"
+          onMouseDown={onMouseDown}
+          onTouchStart={onTouchStart}
+          onClick={handleButtonClick}
+          title="拖动移动位置，点击打开聊天"
           style={{
             position: 'fixed',
-            bottom: '24px',
-            right: '24px',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
             width: '56px',
             height: '56px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
             color: 'white',
             border: 'none',
-            cursor: 'pointer',
+            cursor: isDragging ? 'grabbing' : 'grab',
             boxShadow: '0 4px 12px rgba(79, 70, 229, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 50,
-            transition: 'all 0.3s ease',
+            transition: isDragging ? 'none' : 'box-shadow 0.3s ease',
+            userSelect: 'none',
+            touchAction: 'none',
           }}
           onMouseEnter={(e) => {
-            const btn = e.currentTarget as HTMLButtonElement;
-            btn.style.transform = 'scale(1.1)';
-            btn.style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.6)';
+            if (!isDragging) {
+              const btn = e.currentTarget as HTMLButtonElement;
+              btn.style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.6)';
+            }
           }}
           onMouseLeave={(e) => {
-            const btn = e.currentTarget as HTMLButtonElement;
-            btn.style.transform = 'scale(1)';
-            btn.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.4)';
+            if (!isDragging) {
+              const btn = e.currentTarget as HTMLButtonElement;
+              btn.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.4)';
+            }
           }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -149,33 +252,53 @@ export default function ChatWidget() {
         </button>
       )}
 
-      {/* 聊天框 */}
+      {/* 聊天框 - 可拖动 */}
       {isOpen && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          width: '420px',
-          height: '600px',
-          backgroundColor: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 5px 40px rgba(0, 0, 0, 0.16)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 50,
-        }}>
-          {/* 头部 */}
-          <div style={{
+        <div
+          onMouseDown={(e) => {
+            // 只在头部区域允许拖动整个聊天窗口
+            if ((e.target as HTMLElement).closest('[data-drag-handle]')) {
+              e.preventDefault();
+              handleDragStart(e.clientX, e.clientY);
+            }
+          }}
+          onTouchStart={(e) => {
+            if ((e.target as HTMLElement).closest('[data-drag-handle]')) {
+              const touch = e.touches[0];
+              handleDragStart(touch.clientX, touch.clientY);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            left: `${chatPos.x}px`,
+            top: `${chatPos.y}px`,
+            width: `${CHAT_WIDTH}px`,
+            height: `${CHAT_HEIGHT}px`,
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 5px 40px rgba(0, 0, 0, 0.16)',
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '20px',
-            background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
-            color: 'white',
-            borderRadius: '12px 12px 0 0',
-            borderBottom: '1px solid #e5e7eb',
+            flexDirection: 'column',
+            zIndex: 50,
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>畜舍智能助手</h3>
+          {/* 头部 - 拖动把手 */}
+          <div
+            data-drag-handle
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              color: 'white',
+              borderRadius: '12px 12px 0 0',
+              cursor: isDragging ? 'grabbing' : 'grab',
+              userSelect: 'none',
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '12px', opacity: 0.7 }}>⋮⋮</span>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>畜舍智能助手</h3>
+            </div>
             <button
               style={{
                 background: 'rgba(255, 255, 255, 0.2)',
@@ -191,7 +314,8 @@ export default function ChatWidget() {
                 justifyContent: 'center',
                 transition: 'background 0.2s',
               }}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setIsOpen(false);
                 setMessages([]);
                 setSessionId(null);
