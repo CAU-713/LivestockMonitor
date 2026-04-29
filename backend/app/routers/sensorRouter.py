@@ -182,10 +182,18 @@ def update_sensor(
         db: SessionDep
 ) -> ResponseDTO[SensorResponseDTO]:
     """更新传感器"""
+    # 更新前先获取旧 shed_id，迁移羊舍时需要同时清除旧 shed 的 by_shed 缓存
+    old_sensor = SensorService.get_sensor_by_id(db, sensor_id)
+    old_shed_id = old_sensor.shed_id
+
     sensor = SensorService.update_sensor(db, sensor_id, sensor_data)
-    # 失效列表和 by-shed 缓存
+    # 失效列表缓存
     delete_pattern("sensor:list:*")
+    # 失效新 shed 的 by_shed 缓存
     delete_cache(f"sensor:by_shed:{sensor.shed_id}")
+    # 若羊舍发生变化，同时清除旧 shed 的 by_shed 缓存
+    if old_shed_id != sensor.shed_id:
+        delete_cache(f"sensor:by_shed:{old_shed_id}")
 
     return ResponseDTO(
         code=200,
@@ -233,9 +241,14 @@ def update_sensor_reading(
         db: SessionDep
 ) -> ResponseDTO[SensorResponseDTO]:
     """更新传感器读数"""
+    # 更新前先获取 shed_id，以便精准清除 by_shed 缓存
+    old_sensor = SensorService.get_sensor_by_id(db, sensor_id)
+    shed_id = old_sensor.shed_id
+
     sensor = SensorService.update_sensor_reading(db, sensor_id, reading)
-    # 读数更新频繁，只失效列表缓存（by-shed 缓存不含读数，无需失效）
+    # by_shed 缓存的 DTO 中包含 last_reading，读数变化后需同时失效
     delete_pattern("sensor:list:*")
+    delete_cache(f"sensor:by_shed:{shed_id}")
 
     return ResponseDTO(
         code=200,

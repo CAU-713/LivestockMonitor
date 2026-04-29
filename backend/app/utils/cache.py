@@ -28,11 +28,21 @@ logger = logging.getLogger(__name__)
 
 # 模块级 Redis 客户端（懒初始化，首次调用时连接）
 _redis_client: Optional[redis.Redis] = None
+# Redis 不可用标记：一旦置 True，后续调用直接快速失败，不再反复等待连接超时
+_redis_unavailable: bool = False
 
 
 def _get_client() -> Optional[redis.Redis]:
-    """获取 Redis 客户端，连接失败时返回 None（降级模式）。"""
-    global _redis_client
+    """获取 Redis 客户端，连接失败时返回 None（降级模式）。
+
+    已连接时直接返回缓存的客户端实例；
+    连接失败后设置 _redis_unavailable=True，避免每次请求都触发连接超时等待。
+    """
+    global _redis_client, _redis_unavailable
+    # 已标记不可用，快速返回 None
+    if _redis_unavailable:
+        return None
+    # 已有可用客户端，直接返回
     if _redis_client is not None:
         return _redis_client
     try:
@@ -51,6 +61,7 @@ def _get_client() -> Optional[redis.Redis]:
         return _redis_client
     except Exception as e:
         logger.warning(f"Redis 连接失败，缓存降级为直连数据库模式: {e}")
+        _redis_unavailable = True
         return None
 
 
@@ -74,6 +85,7 @@ def get_cache(key: str) -> Optional[Any]:
         return json.loads(raw)
     except Exception as e:
         logger.warning(f"Redis get 失败 (key={key}): {e}")
+        _reset_client()
         return None
 
 
@@ -93,6 +105,7 @@ def set_cache(key: str, value: Any, ttl: int = 60) -> None:
         client.setex(key, ttl, json.dumps(value, ensure_ascii=False, default=str))
     except Exception as e:
         logger.warning(f"Redis set 失败 (key={key}): {e}")
+        _reset_client()
 
 
 def delete_cache(*keys: str) -> None:
@@ -111,6 +124,7 @@ def delete_cache(*keys: str) -> None:
         client.delete(*keys)
     except Exception as e:
         logger.warning(f"Redis delete 失败 (keys={keys}): {e}")
+        _reset_client()
 
 
 def delete_pattern(pattern: str) -> None:
@@ -135,3 +149,15 @@ def delete_pattern(pattern: str) -> None:
                 break
     except Exception as e:
         logger.warning(f"Redis delete_pattern 失败 (pattern={pattern}): {e}")
+        _reset_client()
+
+
+def _reset_client() -> None:
+    """重置 Redis 客户端状态，允许下次请求重新尝试连接。
+
+    用于运行期间 Redis 断开后的恢复：清除缓存的客户端实例和不可用标记，
+    下次调用 _get_client() 时会重新尝试建立连接。
+    """
+    global _redis_client, _redis_unavailable
+    _redis_client = None
+    _redis_unavailable = False

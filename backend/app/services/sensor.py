@@ -75,13 +75,11 @@ class SensorService:
         SensorTypeService.get_sensor_type_by_id(db, sensor_data.type)
 
         # 验证羊舍是否存在
-        from app.services.shed_service import ShedService
+        from app.services.shed import ShedService
         ShedService.get_shed_by_id(db, sensor_data.shed_id)
 
         # 创建传感器对象
         sensor = SensorDO(**sensor_data.model_dump())
-        sensor.created_at = datetime.utcnow()
-        sensor.updated_at = datetime.utcnow()
 
         db.add(sensor)
         db.commit()
@@ -186,15 +184,13 @@ class SensorService:
 
         # 如果更新羊舍，验证新羊舍是否存在
         if sensor_data.shed_id:
-            from app.services.shed_service import ShedService
+            from app.services.shed import ShedService
             ShedService.get_shed_by_id(db, sensor_data.shed_id)
 
         # 更新字段
         update_data = sensor_data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(sensor, key, value)
-
-        sensor.updated_at = datetime.utcnow()
 
         db.add(sensor)
         db.commit()
@@ -232,7 +228,6 @@ class SensorService:
         sensor = SensorService.get_sensor_by_id(db, sensor_id)
 
         sensor.last_reading = reading
-        sensor.updated_at = datetime.utcnow()
 
         db.add(sensor)
         db.commit()
