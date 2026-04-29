@@ -221,36 +221,30 @@ class AlertService:
 
         Returns:
             告警统计DTO
+
+        Note:
+            使用单条带 CASE WHEN 的聚合 SQL，一次全表扫描完成所有统计，
+            替代原来的 6 次独立 COUNT 查询。
         """
-        # 总数
-        total = db.exec(select(func.count()).select_from(AlertDO)).one()
-
-        # 未解决总数
-        unresolved = db.exec(
-            select(func.count()).select_from(AlertDO).where(AlertDO.resolved == False)
-        ).one()
-
-        # 各严重程度数量
-        def count_by_severity(severity: str) -> int:
-            return db.exec(
-                select(func.count()).select_from(AlertDO).where(AlertDO.severity == severity)
-            ).one()
-
-        def count_unresolved_by_severity(severity: str) -> int:
-            return db.exec(
-                select(func.count()).select_from(AlertDO).where(
-                    AlertDO.severity == severity,
-                    AlertDO.resolved == False
-                )
-            ).one()
+        stmt = select(
+            func.count().label("total"),
+            func.count().filter(AlertDO.resolved == False).label("unresolved"),
+            func.count().filter(AlertDO.severity == "high").label("high"),
+            func.count().filter(AlertDO.severity == "medium").label("medium"),
+            func.count().filter(AlertDO.severity == "low").label("low"),
+            func.count().filter(AlertDO.severity == "high", AlertDO.resolved == False).label("high_unresolved"),
+            func.count().filter(AlertDO.severity == "medium", AlertDO.resolved == False).label("medium_unresolved"),
+            func.count().filter(AlertDO.severity == "low", AlertDO.resolved == False).label("low_unresolved"),
+        )
+        row = db.exec(stmt).one()
 
         return AlertStatsDTO(
-            total=total,
-            unresolved=unresolved,
-            high=count_by_severity("high"),
-            medium=count_by_severity("medium"),
-            low=count_by_severity("low"),
-            high_unresolved=count_unresolved_by_severity("high"),
-            medium_unresolved=count_unresolved_by_severity("medium"),
-            low_unresolved=count_unresolved_by_severity("low"),
+            total=row.total,
+            unresolved=row.unresolved,
+            high=row.high,
+            medium=row.medium,
+            low=row.low,
+            high_unresolved=row.high_unresolved,
+            medium_unresolved=row.medium_unresolved,
+            low_unresolved=row.low_unresolved,
         )

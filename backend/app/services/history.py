@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 from sqlmodel import Session, select, func, and_, or_
 from fastapi import HTTPException, status
 
-from app.models.RecordDataDO import SensorRecordDO,VideoRecordDO
-from app.models.DeviceDO import SensorDO, SensorTypeDO,CameraDO
+from app.models.RecordDataDO import SensorRecordDO, VideoRecordDO
+from app.models.DeviceDO import SensorDO, SensorTypeDO, CameraDO
 from app.models.FacilityDO import ShedDO
 from app.schemas.historyDTO import (
     SensorHistoryDataDTO,
@@ -38,6 +38,8 @@ class SensorHistoryService:
 
         Returns:
             传感器历史数据列表
+
+        优化：批量预加载 SensorTypeDO 和 ShedDO，消除 N+1 查询。
         """
         # 构建传感器查询条件
         sensor_filters = []
@@ -58,16 +60,29 @@ class SensorHistoryService:
         if not sensors:
             return []
 
+        # --- 批量预加载，消除 N+1 ---
+        # 收集所有需要的 sensor_type id 和 shed_id
+        type_ids = list({s.type for s in sensors})
+        shed_ids = list({s.shed_id for s in sensors})
+
+        sensor_type_map: dict = {
+            st.id: st
+            for st in db.exec(select(SensorTypeDO).where(SensorTypeDO.id.in_(type_ids))).all()
+        }
+        shed_map: dict = {
+            sh.id: sh
+            for sh in db.exec(select(ShedDO).where(ShedDO.id.in_(shed_ids))).all()
+        }
+        # ----------------------------
+
         # 为每个传感器查询历史数据
         result = []
         for sensor in sensors:
-            # 获取传感器类型信息
-            sensor_type = db.get(SensorTypeDO, sensor.type)
+            sensor_type = sensor_type_map.get(sensor.type)
             if not sensor_type:
                 continue
 
-            # 获取羊舍信息
-            shed = db.get(ShedDO, sensor.shed_id)
+            shed = shed_map.get(sensor.shed_id)
             if not shed:
                 continue
 
@@ -250,6 +265,8 @@ class VideoHistoryService:
 
         Returns:
             视频列表和分页信息
+
+        优化：批量预加载 CameraDO 和 ShedDO，消除 N+1 查询。
         """
         # 构建查询条件
         filters = []
@@ -284,13 +301,25 @@ class VideoHistoryService:
         # 执行查询
         videos = db.exec(statement).all()
 
+        # --- 批量预加载 CameraDO 和 ShedDO，消除 N+1 ---
+        camera_ids = list({v.camera_id for v in videos})
+        shed_ids = list({v.shed_id for v in videos})
+
+        camera_map: dict = {
+            c.id: c
+            for c in db.exec(select(CameraDO).where(CameraDO.id.in_(camera_ids))).all()
+        }
+        shed_map: dict = {
+            s.id: s
+            for s in db.exec(select(ShedDO).where(ShedDO.id.in_(shed_ids))).all()
+        }
+        # -----------------------------------------------
+
         # 构建响应数据
         video_list = []
         for video in videos:
-            # 获取摄像头信息
-            camera = db.get(CameraDO, video.camera_id)
-            # 获取羊舍信息
-            shed = db.get(ShedDO, video.shed_id)
+            camera = camera_map.get(video.camera_id)
+            shed = shed_map.get(video.shed_id)
 
             video_info = VideoInfoDTO(
                 id=f"video-{video.id}",

@@ -1,11 +1,13 @@
 /**
  * 统一的 HTTP 客户端
- * 基于 Fetch API 封装，提供统一的请求拦截、错误处理等功能
+ * 基于 Fetch API 封装，提供统一的请求拦截、错误处理和超时控制等功能
  */
 
 interface RequestConfig extends RequestInit {
   params?: Record<string, any>;
   data?: any;
+  /** 请求超时毫秒数，默认 15000ms（15秒） */
+  timeout?: number;
 }
 
 interface ApiResponse<T = any> {
@@ -13,6 +15,8 @@ interface ApiResponse<T = any> {
   data: T;
   message?: string;
 }
+
+const DEFAULT_TIMEOUT = 15000;
 
 class HttpClient {
   private baseURL: string;
@@ -79,16 +83,47 @@ class HttpClient {
   }
 
   /**
+   * 带超时控制的 fetch 封装
+   * 使用 AbortController 在指定时间后中止请求，避免请求无限 pending。
+   *
+   * @param url 请求地址
+   * @param options fetch 选项
+   * @param timeout 超时毫秒数
+   */
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+    timeout: number = DEFAULT_TIMEOUT,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        throw new Error(`Request timed out after ${timeout}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
    * GET 请求
    */
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     const url = this.buildURL(endpoint, config?.params);
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.getHeaders(config?.headers),
-      ...config,
-    });
+    const response = await this.fetchWithTimeout(
+      url,
+      {
+        method: 'GET',
+        headers: this.getHeaders(config?.headers),
+        ...config,
+      },
+      config?.timeout ?? DEFAULT_TIMEOUT,
+    );
 
     return this.handleResponse<T>(response);
   }
@@ -99,12 +134,16 @@ class HttpClient {
   async post<T>(endpoint: string, data?: any, config?: RequestConfig): Promise<T> {
     const url = this.buildURL(endpoint, config?.params);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: this.getHeaders(config?.headers),
-      body: data ? JSON.stringify(data) : undefined,
-      ...config,
-    });
+    const response = await this.fetchWithTimeout(
+      url,
+      {
+        method: 'POST',
+        headers: this.getHeaders(config?.headers),
+        body: data ? JSON.stringify(data) : undefined,
+        ...config,
+      },
+      config?.timeout ?? DEFAULT_TIMEOUT,
+    );
 
     return this.handleResponse<T>(response);
   }
@@ -115,12 +154,16 @@ class HttpClient {
   async put<T>(endpoint: string, data?: any, config?: RequestConfig): Promise<T> {
     const url = this.buildURL(endpoint, config?.params);
 
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: this.getHeaders(config?.headers),
-      body: data ? JSON.stringify(data) : undefined,
-      ...config,
-    });
+    const response = await this.fetchWithTimeout(
+      url,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(config?.headers),
+        body: data ? JSON.stringify(data) : undefined,
+        ...config,
+      },
+      config?.timeout ?? DEFAULT_TIMEOUT,
+    );
 
     return this.handleResponse<T>(response);
   }
@@ -131,11 +174,15 @@ class HttpClient {
   async delete<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     const url = this.buildURL(endpoint, config?.params);
 
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: this.getHeaders(config?.headers),
-      ...config,
-    });
+    const response = await this.fetchWithTimeout(
+      url,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders(config?.headers),
+        ...config,
+      },
+      config?.timeout ?? DEFAULT_TIMEOUT,
+    );
 
     return this.handleResponse<T>(response);
   }

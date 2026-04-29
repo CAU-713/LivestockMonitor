@@ -15,6 +15,7 @@ from app.schemas.sensorDTO import (
     SensorQueryDTO
 )
 from app.services.sensor import SensorService, SensorTypeService
+from app.utils.cache import get_cache, set_cache, delete_cache, delete_pattern
 
 
 router = APIRouter(prefix="/api/sensors", tags=["传感器管理"])
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/api/sensors", tags=["传感器管理"])
     description="获取所有可用的传感器类型"
 )
 def get_sensor_types(
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[list[SensorTypeResponseDTO]]:
     """获取传感器类型列表"""
     sensor_types = SensorTypeService.get_all_sensor_types(db)
@@ -50,7 +51,7 @@ def get_sensor_types(
 )
 def get_sensor_type(
         type_id: str,
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[SensorTypeResponseDTO]:
     """获取传感器类型详情"""
     sensor_type = SensorTypeService.get_sensor_type_by_id(db, type_id)
@@ -73,10 +74,14 @@ def get_sensor_type(
 )
 def create_sensor(
         sensor_data: SensorCreateDTO,
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[SensorResponseDTO]:
     """创建传感器"""
     sensor = SensorService.create_sensor(db, sensor_data)
+    # 失效列表缓存
+    delete_pattern("sensor:list:*")
+    if sensor_data.shed_id:
+        delete_cache(f"sensor:by_shed:{sensor_data.shed_id}")
 
     return ResponseDTO(
         code=200,
@@ -102,7 +107,19 @@ def get_sensors(
         page: Annotated[int, Query(description="页码", ge=1)] = 1,
         page_size: Annotated[int, Query(description="每页数量", ge=1, le=10000)] = 10
 ) -> ResponseDTO[ListResponseData[SensorResponseDTO]]:
-    """获取传感器列表"""
+    """获取传感器列表（带 120s Redis 缓存）"""
+    cache_key = f"sensor:list:{shed_id}:{pen_id}:{type}:{status}:{search}:{page}:{page_size}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        items = [SensorResponseDTO(**item) for item in cached["items"]]
+        data = ListResponseData(
+            items=items,
+            total=cached["total"],
+            page=cached["page"],
+            page_size=cached["page_size"],
+        )
+        return ResponseDTO(code=200, success=True, message="查询成功", data=data)
+
     query_params = SensorQueryDTO(
         shed_id=shed_id,
         pen_id=pen_id,
@@ -122,6 +139,7 @@ def get_sensors(
         page=result.page,
         page_size=result.page_size
     )
+    set_cache(cache_key, response_data.model_dump(), ttl=120)
 
     return ResponseDTO(
         code=200,
@@ -139,7 +157,7 @@ def get_sensors(
 )
 def get_sensor(
         sensor_id: int,
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[SensorResponseDTO]:
     """获取传感器详情"""
     sensor = SensorService.get_sensor_by_id(db, sensor_id)
@@ -161,10 +179,13 @@ def get_sensor(
 def update_sensor(
         sensor_id: int,
         sensor_data: SensorUpdateDTO,
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[SensorResponseDTO]:
     """更新传感器"""
     sensor = SensorService.update_sensor(db, sensor_id, sensor_data)
+    # 失效列表和 by-shed 缓存
+    delete_pattern("sensor:list:*")
+    delete_cache(f"sensor:by_shed:{sensor.shed_id}")
 
     return ResponseDTO(
         code=200,
@@ -182,10 +203,15 @@ def update_sensor(
 )
 def delete_sensor(
         sensor_id: int,
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[None]:
     """删除传感器"""
+    # 删除前先获取 shed_id 以便精准失效缓存
+    sensor = SensorService.get_sensor_by_id(db, sensor_id)
+    shed_id = sensor.shed_id
     SensorService.delete_sensor(db, sensor_id)
+    delete_pattern("sensor:list:*")
+    delete_cache(f"sensor:by_shed:{shed_id}")
 
     return ResponseDTO(
         code=200,
@@ -204,10 +230,12 @@ def delete_sensor(
 def update_sensor_reading(
         sensor_id: int,
         reading: Annotated[float, Query(description="新的读数值")],
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[SensorResponseDTO]:
     """更新传感器读数"""
     sensor = SensorService.update_sensor_reading(db, sensor_id, reading)
+    # 读数更新频繁，只失效列表缓存（by-shed 缓存不含读数，无需失效）
+    delete_pattern("sensor:list:*")
 
     return ResponseDTO(
         code=200,
@@ -225,14 +253,26 @@ def update_sensor_reading(
 )
 def get_sensors_by_shed(
         shed_id: int,
-        db: SessionDep  # 修改：使用SessionDep而不是get_db
+        db: SessionDep
 ) -> ResponseDTO[list[SensorResponseDTO]]:
-    """获取羊舍的所有传感器"""
+    """获取羊舍的所有传感器（带 120s Redis 缓存）"""
+    cache_key = f"sensor:by_shed:{shed_id}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return ResponseDTO(
+            code=200,
+            success=True,
+            message="查询成功",
+            data=[SensorResponseDTO(**item) for item in cached]
+        )
+
     sensors = SensorService.get_sensors_by_shed(db, shed_id)
+    sensor_dtos = [SensorResponseDTO.model_validate(sensor) for sensor in sensors]
+    set_cache(cache_key, [s.model_dump() for s in sensor_dtos], ttl=120)
 
     return ResponseDTO(
         code=200,
         success=True,
         message="查询成功",
-        data=[SensorResponseDTO.model_validate(sensor) for sensor in sensors]
+        data=sensor_dtos
     )

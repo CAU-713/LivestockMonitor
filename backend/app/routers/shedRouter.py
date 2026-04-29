@@ -14,6 +14,7 @@ from app.schemas.shedDTO import (
     ShedQueryDTO
 )
 from app.services.shed import ShedService
+from app.utils.cache import get_cache, set_cache, delete_cache, delete_pattern
 
 router = APIRouter(prefix="/api/sheds", tags=["羊舍管理"])
 
@@ -30,6 +31,7 @@ def create_shed(
 ) -> ResponseDTO[ShedResponseDTO]:
     """创建羊舍"""
     shed = ShedService.create_shed(db, shed_data)
+    delete_pattern("shed:list:*")
 
     return ResponseDTO(
         code=200,
@@ -53,7 +55,19 @@ def get_sheds(
         page: Annotated[int, Query(description="页码", ge=1)] = 1,
         page_size: Annotated[int, Query(description="每页数量", ge=1, le=10000)] = 10
 ) -> ResponseDTO[ListResponseData[ShedResponseDTO]]:
-    """获取羊舍列表"""
+    """获取羊舍列表（带 300s Redis 缓存）"""
+    cache_key = f"shed:list:{status}:{type}:{search}:{page}:{page_size}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        items = [ShedResponseDTO(**item) for item in cached["items"]]
+        data = ListResponseData(
+            items=items,
+            total=cached["total"],
+            page=cached["page"],
+            page_size=cached["page_size"],
+        )
+        return ResponseDTO(code=200, success=True, message="查询成功", data=data)
+
     query_params = ShedQueryDTO(
         status=status,
         type=type,
@@ -71,6 +85,7 @@ def get_sheds(
         page=result.page,
         page_size=result.page_size
     )
+    set_cache(cache_key, response_data.model_dump(), ttl=300)
 
     return ResponseDTO(
         code=200,
@@ -114,6 +129,7 @@ def update_shed(
 ) -> ResponseDTO[ShedResponseDTO]:
     """更新羊舍"""
     shed = ShedService.update_shed(db, shed_id, shed_data)
+    delete_pattern("shed:list:*")
 
     return ResponseDTO(
         code=200,
@@ -135,6 +151,7 @@ def delete_shed(
 ) -> ResponseDTO[None]:
     """删除羊舍"""
     ShedService.delete_shed(db, shed_id)
+    delete_pattern("shed:list:*")
 
     return ResponseDTO(
         code=200,
@@ -157,6 +174,7 @@ def update_livestock_count(
 ) -> ResponseDTO[ShedResponseDTO]:
     """更新牲畜数量"""
     shed = ShedService.update_livestock_count(db, shed_id, count)
+    delete_pattern("shed:list:*")
 
     return ResponseDTO(
         code=200,

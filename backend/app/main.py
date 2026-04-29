@@ -2,6 +2,7 @@ import importlib
 import os
 import json
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import uvicorn
@@ -10,9 +11,31 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings, create_db_and_tables
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    应用生命周期管理（替代已弃用的 @app.on_event("startup")）
+    yield 之前为 startup 逻辑，yield 之后为 shutdown 逻辑。
+    """
+    # startup
+    create_db_and_tables()
+
+    # 迁移存量明文密码为 bcrypt 哈希（幂等操作，已加密的密码不会重复处理）
+    from app.utils.migrate_passwords import migrate_plain_passwords
+    DB_URL_FOR_MIGRATION = (
+        f"postgresql://{settings.db_user}:{settings.db_password}"
+        f"@{settings.db_host}:{settings.db_port}/{settings.db_name}"
+    )
+    migrate_plain_passwords(DB_URL_FOR_MIGRATION)
+
+    yield
+    # shutdown：如需清理资源（关闭连接池等）可在此添加
+
+
 # redirect_slashes=False：禁止 FastAPI 对 /api/users 自动重定向到 /api/users/
 # 避免 Next.js 代理不跟随 307 重定向导致的 500 错误
-app = FastAPI(redirect_slashes=False)
+app = FastAPI(redirect_slashes=False, lifespan=lifespan)
 
 # 添加 CORS 中间件，允许前端跨域访问
 app.add_middleware(
@@ -84,17 +107,6 @@ async def websocket_alerts(websocket: WebSocket):
                 pass
     except WebSocketDisconnect:
         alert_manager.disconnect(websocket)
-
-
-# 在启动时创建数据库表
-@app.on_event("startup")
-async def on_startup():
-    create_db_and_tables()
-
-    # 迁移存量明文密码为 bcrypt 哈希（幂等操作，已加密的密码不会重复处理）
-    from app.utils.migrate_passwords import migrate_plain_passwords
-    DB_URL_FOR_MIGRATION = f"postgresql://{settings.db_user}:{settings.db_password}@{settings.db_host}:{settings.db_port}/{settings.db_name}"
-    migrate_plain_passwords(DB_URL_FOR_MIGRATION)
 
 
 # 自动发现并注册路由

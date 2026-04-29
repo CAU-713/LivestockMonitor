@@ -17,6 +17,7 @@ from app.schemas.alertDTO import (
     AlertStatsDTO,
 )
 from app.services.alert import AlertService
+from app.utils.cache import get_cache, set_cache, delete_cache, delete_pattern
 
 router = APIRouter(prefix="/api/alerts", tags=["告警中心"])
 
@@ -28,8 +29,14 @@ router = APIRouter(prefix="/api/alerts", tags=["告警中心"])
     description="获取各严重程度告警数量及未解决告警数量统计"
 )
 def get_alert_stats(db: SessionDep) -> ResponseDTO[AlertStatsDTO]:
-    """获取告警统计数据"""
+    """获取告警统计数据（带 60s Redis 缓存）"""
+    cache_key = "alert:stats"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return ResponseDTO(code=200, success=True, message="查询成功", data=AlertStatsDTO(**cached))
+
     stats = AlertService.get_alert_stats(db)
+    set_cache(cache_key, stats.model_dump(), ttl=60)
     return ResponseDTO(code=200, success=True, message="查询成功", data=stats)
 
 
@@ -49,7 +56,22 @@ def get_alerts(
     page: Annotated[int, Query(description="页码", ge=1)] = 1,
     page_size: Annotated[int, Query(description="每页数量", ge=1, le=1000)] = 20,
 ) -> ResponseDTO[ListResponseData[AlertResponseDTO]]:
-    """获取告警列表"""
+    """获取告警列表（带 30s Redis 缓存）"""
+    cache_key = (
+        f"alert:list:{shed_id}:{severity}:{resolved}:"
+        f"{start_time}:{end_time}:{page}:{page_size}"
+    )
+    cached = get_cache(cache_key)
+    if cached is not None:
+        items = [AlertResponseDTO(**item) for item in cached["items"]]
+        data = ListResponseData(
+            items=items,
+            total=cached["total"],
+            page=cached["page"],
+            page_size=cached["page_size"],
+        )
+        return ResponseDTO(code=200, success=True, message="查询成功", data=data)
+
     query_params = AlertQueryDTO(
         shed_id=shed_id,
         severity=severity,
@@ -60,6 +82,7 @@ def get_alerts(
         page_size=page_size,
     )
     result = AlertService.get_alerts(db, query_params)
+    set_cache(cache_key, result.model_dump(), ttl=30)
     return ResponseDTO(code=200, success=True, message="查询成功", data=result)
 
 
@@ -75,6 +98,10 @@ async def create_alert(
 ) -> ResponseDTO[AlertResponseDTO]:
     """手动创建告警"""
     alert = AlertService.create_alert(db, alert_data)
+
+    # 失效相关缓存
+    delete_cache("alert:stats")
+    delete_pattern("alert:list:*")
 
     # 通过 WebSocket 实时推送告警到所有连接的客户端
     try:
@@ -114,6 +141,9 @@ def resolve_alert(
 ) -> ResponseDTO[AlertResponseDTO]:
     """解决告警"""
     alert = AlertService.resolve_alert(db, alert_id, resolve_data)
+    # 解决告警后，统计和列表缓存均需失效
+    delete_cache("alert:stats")
+    delete_pattern("alert:list:*")
     return ResponseDTO(code=200, success=True, message="告警已解决", data=alert)
 
 
@@ -126,4 +156,7 @@ def resolve_alert(
 def delete_alert(alert_id: int, db: SessionDep) -> ResponseDTO[None]:
     """删除告警"""
     AlertService.delete_alert(db, alert_id)
+    # 删除告警后，统计和列表缓存均需失效
+    delete_cache("alert:stats")
+    delete_pattern("alert:list:*")
     return ResponseDTO(code=200, success=True, message="告警删除成功", data=None)

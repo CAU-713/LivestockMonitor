@@ -18,6 +18,7 @@ from app.schemas.animalDTO import (
     AnimalStatsDTO,
 )
 from app.services.animal import AnimalService
+from app.utils.cache import get_cache, set_cache, delete_cache, delete_pattern
 
 router = APIRouter(prefix="/api/animals", tags=["动物档案管理"])
 
@@ -29,8 +30,14 @@ router = APIRouter(prefix="/api/animals", tags=["动物档案管理"])
     description="获取各健康状态、生产类别的动物数量统计"
 )
 def get_animal_stats(db: SessionDep) -> ResponseDTO[AnimalStatsDTO]:
-    """获取动物统计"""
+    """获取动物统计（带 120s Redis 缓存）"""
+    cache_key = "animal:stats"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return ResponseDTO(code=200, success=True, message="查询成功", data=AnimalStatsDTO(**cached))
+
     stats = AnimalService.get_stats(db)
+    set_cache(cache_key, stats.model_dump(), ttl=120)
     return ResponseDTO(code=200, success=True, message="查询成功", data=stats)
 
 
@@ -68,7 +75,22 @@ def get_animals(
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=1000)] = 20,
 ) -> ResponseDTO[ListResponseData[AnimalResponseDTO]]:
-    """获取动物列表"""
+    """获取动物列表（带 120s Redis 缓存）"""
+    cache_key = (
+        f"animal:list:{shed_id}:{health_status}:{gender}:{breed}:"
+        f"{production_type}:{breeding_status}:{search}:{page}:{page_size}"
+    )
+    cached = get_cache(cache_key)
+    if cached is not None:
+        items = [AnimalResponseDTO(**item) for item in cached["items"]]
+        data = ListResponseData(
+            items=items,
+            total=cached["total"],
+            page=cached["page"],
+            page_size=cached["page_size"],
+        )
+        return ResponseDTO(code=200, success=True, message="查询成功", data=data)
+
     query_params = AnimalQueryDTO(
         shed_id=shed_id,
         health_status=health_status,
@@ -81,6 +103,7 @@ def get_animals(
         page_size=page_size,
     )
     result = AnimalService.get_animals(db, query_params)
+    set_cache(cache_key, result.model_dump(), ttl=120)
     return ResponseDTO(code=200, success=True, message="查询成功", data=result)
 
 
@@ -96,6 +119,8 @@ def create_animal(
 ) -> ResponseDTO[AnimalResponseDTO]:
     """新增动物档案"""
     animal = AnimalService.create_animal(db, data)
+    delete_pattern("animal:list:*")
+    delete_cache("animal:stats")
     return ResponseDTO(code=200, success=True, message="动物档案创建成功", data=animal)
 
 
@@ -124,6 +149,8 @@ def update_animal(
 ) -> ResponseDTO[AnimalResponseDTO]:
     """更新动物档案"""
     animal = AnimalService.update_animal(db, animal_id, data)
+    delete_pattern("animal:list:*")
+    delete_cache("animal:stats")
     return ResponseDTO(code=200, success=True, message="动物档案更新成功", data=animal)
 
 
@@ -140,6 +167,8 @@ def update_health_status(
 ) -> ResponseDTO[AnimalResponseDTO]:
     """更新健康状态"""
     animal = AnimalService.update_health_status(db, animal_id, data)
+    delete_pattern("animal:list:*")
+    delete_cache("animal:stats")
     return ResponseDTO(code=200, success=True, message="健康状态更新成功", data=animal)
 
 
@@ -156,6 +185,7 @@ def update_breeding_status(
 ) -> ResponseDTO[AnimalResponseDTO]:
     """更新繁殖状态"""
     animal = AnimalService.update_breeding_status(db, animal_id, data)
+    delete_pattern("animal:list:*")
     return ResponseDTO(code=200, success=True, message="繁殖状态更新成功", data=animal)
 
 
@@ -180,4 +210,6 @@ def get_offspring(animal_id: int, db: SessionDep) -> ResponseDTO[list[AnimalResp
 def delete_animal(animal_id: int, db: SessionDep) -> ResponseDTO[None]:
     """删除动物档案"""
     AnimalService.delete_animal(db, animal_id)
+    delete_pattern("animal:list:*")
+    delete_cache("animal:stats")
     return ResponseDTO(code=200, success=True, message="动物档案删除成功", data=None)

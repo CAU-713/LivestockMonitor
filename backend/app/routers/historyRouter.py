@@ -2,10 +2,11 @@
 历史数据路由
 定义传感器历史数据和视频历史数据相关的 API 接口
 """
+import hashlib
+import json
 from typing import Annotated, List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, Query
-from sqlmodel import Session
+from fastapi import APIRouter, Query
 
 from app.config import SessionDep
 from app.schemas.responseDTO import ResponseDTO, ListResponseData
@@ -17,8 +18,29 @@ from app.schemas.historyDTO import (
     VideoHistoryQueryDTO
 )
 from app.services.history import SensorHistoryService, VideoHistoryService
+from app.utils.cache import get_cache, set_cache
 
 router = APIRouter(prefix="/api/history", tags=["历史数据"])
+
+
+def _make_history_cache_key(
+    shed_ids: Optional[List[int]],
+    sensor_types: Optional[List[str]],
+    start: Optional[datetime],
+    end: Optional[datetime],
+    granularity: str,
+) -> str:
+    """根据查询参数生成传感器历史数据的缓存 key（SHA256 摘要，防止 key 过长）。"""
+    params = {
+        "shed_ids": sorted(shed_ids) if shed_ids else None,
+        "sensor_types": sorted(sensor_types) if sensor_types else None,
+        "start": start.isoformat() if start else None,
+        "end": end.isoformat() if end else None,
+        "granularity": granularity,
+    }
+    params_str = json.dumps(params, sort_keys=True)
+    digest = hashlib.sha256(params_str.encode()).hexdigest()[:16]
+    return f"sensor:history:{digest}"
 
 
 # ==================== 传感器历史数据接口 ====================
@@ -52,11 +74,22 @@ def get_sensor_history_data(
             Query(description="数据粒度: raw-原始数据, hour-小时平均, day-日平均")
         ] = "raw",
 ) -> ResponseDTO[List[SensorHistoryDataDTO]]:
-    """查询历史环境数据"""
+    """查询历史环境数据（hour/day 聚合结果带 5min Redis 缓存，raw 不缓存）"""
 
     # 验证粒度参数
     if granularity not in ["raw", "hour", "day"]:
         granularity = "raw"
+
+    # hour/day 聚合为历史数据，不会变化，适合缓存；raw 实时性要求高，不缓存
+    use_cache = granularity in ("hour", "day")
+    cache_key = None
+
+    if use_cache:
+        cache_key = _make_history_cache_key(shed_ids, sensor_types, start, end, granularity)
+        cached = get_cache(cache_key)
+        if cached is not None:
+            data = [SensorHistoryDataDTO(**item) for item in cached]
+            return ResponseDTO(code=200, success=True, message="查询成功", data=data)
 
     query_params = SensorHistoryQueryDTO(
         shed_ids=shed_ids,
@@ -67,6 +100,9 @@ def get_sensor_history_data(
     )
 
     data = SensorHistoryService.get_sensor_history_data(db, query_params)
+
+    if use_cache and cache_key:
+        set_cache(cache_key, [item.model_dump() for item in data], ttl=300)
 
     return ResponseDTO(
         code=200,
