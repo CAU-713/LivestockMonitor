@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Paper,
   Typography,
@@ -10,11 +10,12 @@ import {
   Box,
   Divider,
 } from '@mui/material';
-import { Sensor, Camera } from '../../../../types';
+import { Sensor, Camera, Alert } from '../../../../types';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import InfoIcon from '@mui/icons-material/Info';
 import { mockSheds } from '@/constants/mockData';
+import { alertApi } from '@/lib/api/apiService';
 
 type Device = (Sensor | Camera) & { deviceType: 'Sensor' | 'Camera' };
 
@@ -22,42 +23,7 @@ interface DeviceStatusListProps {
   devices: Device[];
 }
 
-type WarningItem = {
-  id: string;
-  title: string;
-  message: string;
-  severity: 'info' | 'warning' | 'critical';
-  timestamp: string;
-  shedId?: string;
-};
 
-// 局部假数据：预警信息，由智能化流程产生（示例）
-const mockWarnings: WarningItem[] = [
-  {
-    id: 'warn-1',
-    title: '热应激预警',
-    message: '基于温湿度与行为，检测到热应激上升',
-    severity: 'warning',
-    timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    shedId: 'shed-b',
-  },
-  {
-    id: 'warn-2',
-    title: '氨气短时上升',
-    message: '氨气浓度短时升高，建议排风',
-    severity: 'critical',
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    shedId: 'shed-a',
-  },
-  {
-    id: 'warn-3',
-    title: '行为突增',
-    message: '摄像头检测到行为突增，可能被惊扰',
-    severity: 'info',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    shedId: 'shed-a',
-  },
-];
 
 const getStatusChip = (status: Sensor['status'] | Camera['status']) => {
   switch (status) {
@@ -84,26 +50,26 @@ const getStatusIcon = (status: Sensor['status'] | Camera['status']) => {
   }
 };
 
-const getSeverityChip = (severity: WarningItem['severity']) => {
+const getSeverityChip = (severity: Alert['severity']) => {
   switch (severity) {
-    case 'info':
-      return <Chip label='信息' color='info' size='small' />;
-    case 'warning':
-      return <Chip label='警告' color='warning' size='small' />;
-    case 'critical':
-      return <Chip label='严重' color='error' size='small' />;
+    case 'low':
+      return <Chip label='低危' color='info' size='small' />;
+    case 'medium':
+      return <Chip label='中危' color='warning' size='small' />;
+    case 'high':
+      return <Chip label='高危' color='error' size='small' />;
     default:
       return null;
   }
 };
 
-const getSeverityIcon = (severity: WarningItem['severity']) => {
+const getSeverityIcon = (severity: Alert['severity']) => {
   switch (severity) {
-    case 'info':
+    case 'low':
       return <InfoIcon color='info' />;
-    case 'warning':
+    case 'medium':
       return <WarningAmberIcon color='warning' />;
-    case 'critical':
+    case 'high':
       return <ErrorOutlineIcon color='error' />;
     default:
       return null;
@@ -111,6 +77,28 @@ const getSeverityIcon = (severity: WarningItem['severity']) => {
 };
 
 const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 加载未解决的告警列表
+  useEffect(() => {
+    const loadAlerts = async () => {
+      setLoading(true);
+      try {
+        const res = await alertApi.getAlerts({
+          resolved: false,
+          page_size: 10,
+        });
+        setAlerts(res.items);
+      } catch (e) {
+        console.warn('[DeviceStatusList] 加载告警失败', e);
+        setAlerts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAlerts();
+  }, []);
   return (
     <Paper
       elevation={0}
@@ -263,22 +251,32 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
           }}
         >
           <Typography variant='subtitle1' gutterBottom sx={{ mb: 0.5 }}>
-            预警信息列表
+            告警信息列表
           </Typography>
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
             <List dense sx={{ py: 0 }}>
-              {mockWarnings.map((w) => {
-                const shedName =
-                  mockSheds.find((s) => s.id === w.shedId)?.name || '未知羊舍';
-                return (
-                  <React.Fragment key={w.id}>
+              {loading ? (
+                <ListItem sx={{ px: 0 }}>
+                  <ListItemText
+                    primary={<Typography color='text.secondary'>加载中...</Typography>}
+                  />
+                </ListItem>
+              ) : alerts.length === 0 ? (
+                <ListItem sx={{ px: 0 }}>
+                  <ListItemText
+                    primary={<Typography color='text.secondary'>暂无未解决告警</Typography>}
+                  />
+                </ListItem>
+              ) : (
+                alerts.map((alert) => (
+                  <React.Fragment key={alert.id}>
                     <ListItem sx={{ px: 0 }}>
                       <ListItemIcon sx={{ minWidth: 40 }}>
-                        {getSeverityIcon(w.severity)}
+                        {getSeverityIcon(alert.severity)}
                       </ListItemIcon>
                       <ListItemText
-                        primary={w.title}
-                        secondary={`${w.message} · ${shedName} · ${formatWarningTime(w.timestamp)}`}
+                        primary={`${alert.description.slice(0, 20)}...`}
+                        secondary={`${alert.description} · ${alert.shed_name || `羊舍#${alert.shed_id}`} · ${formatAlertTime(alert.alert_time)}`}
                         sx={{
                           flex: 1,
                           '.MuiListItemText-primary': {
@@ -295,13 +293,13 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
                           justifyContent: 'flex-end',
                         }}
                       >
-                        {getSeverityChip(w.severity)}
+                        {getSeverityChip(alert.severity)}
                       </Box>
                     </ListItem>
                     <Divider component='li' />
                   </React.Fragment>
-                );
-              })}
+                ))
+              )}
             </List>
           </Box>
         </Paper>
@@ -310,8 +308,8 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
   );
 };
 
-// 格式化警告时间，避免 hydration 错误
-const formatWarningTime = (timestamp: string): string => {
+// 格式化告警时间，避免 hydration 错误
+const formatAlertTime = (timestamp: string): string => {
   const date = new Date(timestamp);
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 };

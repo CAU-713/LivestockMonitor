@@ -111,13 +111,6 @@ const Header = () => {
             </Box>
           )}
 
-          {/* 通知 */}
-          <IconButton color="inherit" size="small">
-            <Badge badgeContent={4} color="warning">
-              <NotificationsIcon sx={{ fontSize: 22, color: 'text.secondary' }} />
-            </Badge>
-          </IconButton>
-
           {/* 退出登录 */}
           {user && (
             <Tooltip title="退出登录">
