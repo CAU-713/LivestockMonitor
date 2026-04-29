@@ -270,33 +270,47 @@ const DeviceStatusList: React.FC<DeviceStatusListProps> = ({ devices }) => {
               ) : (
                 alerts.map((alert) => (
                   <React.Fragment key={alert.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemIcon sx={{ minWidth: 40 }}>
+                    <ListItem sx={{ px: 0, py: 1 }}>
+                      <ListItemIcon sx={{ minWidth: 36 }}>
                         {getSeverityIcon(alert.severity)}
                       </ListItemIcon>
                       <ListItemText
-                        primary={`${alert.description.slice(0, 20)}...`}
-                        secondary={`${alert.description} · ${alert.shed_name || `羊舍#${alert.shed_id}`} · ${formatAlertTime(alert.alert_time)}`}
-                        sx={{
-                          flex: 1,
-                          '.MuiListItemText-primary': {
-                            textOverflow: 'ellipsis',
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                          },
-                        }}
+                        primary={
+                          <Typography
+                            variant='body2'
+                            sx={{
+                              lineHeight: 1.5,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical' as const,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            {alert.description}
+                            <Typography
+                              component='span'
+                              variant='caption'
+                              color='text.secondary'
+                              sx={{ ml: 1 }}
+                            >
+                              · {alert.shed_name || `羊舍#${alert.shed_id}`} · {formatAlertTime(alert.alert_time)}
+                            </Typography>
+                          </Typography>
+                        }
+                        sx={{ flex: 1, my: 0 }}
                       />
                       <Box
                         sx={{
-                          width: 90,
+                          width: 56,
                           display: 'flex',
                           justifyContent: 'flex-end',
+                          ml: 1,
                         }}
                       >
                         {getSeverityChip(alert.severity)}
                       </Box>
                     </ListItem>
-                    <Divider component='li' />
+                    <Divider component='li' sx={{ opacity: 0.6 }} />
                   </React.Fragment>
                 ))
               )}
