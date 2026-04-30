@@ -8,6 +8,9 @@ from .HealthDataDO import WeightRecordDO, FeedIntakeRecordDO, BodyTemperatureRec
 from .RecordDataDO import BehaviorRecordDO, SensorRecordDO, VideoRecordDO, HouseComprehensiveEnvironmentDO, \
     EnterpriseFatteningEnvironmentDO
 from .UserDO import UserDO
+from .MedicalDO import VaccinationRecordDO, MedicationRecordDO, DewormingRecordDO
+from .ProductionDO import SlaughterRecordDO, MortalityRecordDO
+from .AuditDO import OperationLogDO
 
 # 添加新模型时在这里导入
 # from .product import ProductDO
@@ -32,5 +35,11 @@ __all__ = [
     "BodyTemperatureRecordDO",
     "RespirationRecordDO",
     "SerumRecordDO",
+    "VaccinationRecordDO",
+    "MedicationRecordDO",
+    "DewormingRecordDO",
+    "SlaughterRecordDO",
+    "MortalityRecordDO",
+    "OperationLogDO",
     # "ProductDO",
 ]

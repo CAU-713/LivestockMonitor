@@ -19,11 +19,13 @@ from app.schemas.healthDTO import (
     SerumRecordCreateDTO,
     SerumRecordResponseDTO,
     WeightTrendResponseDTO,
+    FeedIntakeCreateDTO,
+    FeedIntakeResponseDTO,
+    FeedIntakeTrendResponseDTO,
 )
 from app.services.health import HealthService
 
 router = APIRouter(prefix="/api/health", tags=["健康数据管理"])
-
 
 # ─── 体重接口 ────────────────────────────────────────────────
 
@@ -155,3 +157,49 @@ def get_serum_records(
 ) -> ResponseDTO[ListResponseData[SerumRecordResponseDTO]]:
     result = HealthService.get_serum_records(db, animal_id, page, page_size)
     return ResponseDTO(code=200, success=True, message="查询成功", data=result)
+
+
+# ─── 采食量接口 ────────────────────────────────────────────────
+
+@router.post(
+    "/feed-intake",
+    response_model=ResponseDTO[FeedIntakeResponseDTO],
+    summary="新增采食量记录（自动计算采食量汇总）"
+)
+def create_feed_intake(
+    data: FeedIntakeCreateDTO,
+    db: SessionDep,
+) -> ResponseDTO[FeedIntakeResponseDTO]:
+    record = HealthService.create_feed_intake(db, data)
+    return ResponseDTO(code=200, success=True, message="采食量记录创建成功", data=record)
+
+
+@router.get(
+    "/feed-intake",
+    response_model=ResponseDTO[ListResponseData[FeedIntakeResponseDTO]],
+    summary="获取采食量记录列表"
+)
+def get_feed_intakes(
+    db: SessionDep,
+    pen_id: Annotated[Optional[int], Query(description="圈舍ID", gt=0)] = None,
+    start_date: Annotated[Optional[date], Query(description="开始日期")] = None,
+    end_date: Annotated[Optional[date], Query(description="结束日期")] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=500)] = 50,
+) -> ResponseDTO[ListResponseData[FeedIntakeResponseDTO]]:
+    result = HealthService.get_feed_intakes(db, pen_id, start_date, end_date, page, page_size)
+    return ResponseDTO(code=200, success=True, message="查询成功", data=result)
+
+
+@router.get(
+    "/feed-intake/trend/{pen_id}",
+    response_model=ResponseDTO[FeedIntakeTrendResponseDTO],
+    summary="获取圈舍采食量趋势（近N天）"
+)
+def get_feed_intake_trend(
+    pen_id: int,
+    db: SessionDep,
+    days: Annotated[int, Query(description="近N天", ge=1, le=365)] = 30,
+) -> ResponseDTO[FeedIntakeTrendResponseDTO]:
+    trend = HealthService.get_feed_intake_trend(db, pen_id, days)
+    return ResponseDTO(code=200, success=True, message="查询成功", data=trend)

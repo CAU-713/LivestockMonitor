@@ -5,6 +5,9 @@ import { Container, Box, Tabs, Tab, Paper, Typography } from '@mui/material';
 import UserManagement from '@/app/(main)/settings/components/UserManagement';
 import DeviceManagement from '@/app/(main)/settings/components/DeviceManagement';
 import AlertRuleManagement from '@/app/(main)/settings/components/AlertRuleManagement';
+import AuditLogManagement from '@/app/(main)/settings/components/AuditLogManagement';
+import BatchImportManagement from '@/app/(main)/settings/components/BatchImportManagement';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -30,6 +33,7 @@ const TabPanel = (props: TabPanelProps) => {
 
 export default function SettingsPage() {
   const [tabValue, setTabValue] = useState(0);
+  const { isAdmin } = useAuth();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -73,6 +77,18 @@ export default function SettingsPage() {
             id='settings-tab-2'
             aria-controls='settings-tabpanel-2'
           />
+          <Tab
+            label='批量导入'
+            id='settings-tab-3'
+            aria-controls='settings-tabpanel-3'
+          />
+          {isAdmin && (
+            <Tab
+              label='操作日志'
+              id='settings-tab-4'
+              aria-controls='settings-tabpanel-4'
+            />
+          )}
         </Tabs>
 
         <Box sx={{ p: 3 }}>
@@ -87,6 +103,16 @@ export default function SettingsPage() {
           <TabPanel value={tabValue} index={2}>
             <AlertRuleManagement />
           </TabPanel>
+
+          <TabPanel value={tabValue} index={3}>
+            <BatchImportManagement />
+          </TabPanel>
+
+          {isAdmin && (
+            <TabPanel value={tabValue} index={4}>
+              <AuditLogManagement />
+            </TabPanel>
+          )}
         </Box>
       </Paper>
     </Container>

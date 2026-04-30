@@ -177,3 +177,68 @@ class WeightTrendPoint(BaseModel):
 class WeightTrendResponseDTO(BaseModel):
     animal_id: int
     data: List[WeightTrendPoint]
+
+
+# ─── 采食量记录 ────────────────────────────────────────────────
+
+class FeedIntakeCreateDTO(BaseModel):
+    pen_id: int = Field(..., gt=0, description="圈舍ID")
+    record_date: date = Field(..., description="记录日期")
+    sheep_count: int = Field(..., gt=0, description="当日羊只数量")
+
+    # 上午数据
+    morning_feeding_amount_kg: Optional[float] = Field(default=None, ge=0, description="上午投放饲料量(kg)")
+    morning_box_weight_kg: Optional[float] = Field(default=None, ge=0, description="上午空箱总重量(kg)")
+    morning_remaining_feed_kg: Optional[float] = Field(default=None, ge=0, description="上午剩料+空箱总重(kg)")
+
+    # 下午数据
+    afternoon_feeding_amount_kg: Optional[float] = Field(default=None, ge=0, description="下午投放饲料量(kg)")
+    afternoon_box_weight_kg: Optional[float] = Field(default=None, ge=0, description="下午空箱总重量(kg)")
+    afternoon_remaining_feed_kg: Optional[float] = Field(default=None, ge=0, description="下午剩料+空箱总重(kg)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "pen_id": 1,
+                "record_date": "2026-04-28",
+                "sheep_count": 10,
+                "morning_feeding_amount_kg": 20.0,
+                "morning_box_weight_kg": 2.0,
+                "morning_remaining_feed_kg": 4.5,
+                "afternoon_feeding_amount_kg": 20.0,
+                "afternoon_box_weight_kg": 2.0,
+                "afternoon_remaining_feed_kg": 3.0
+            }
+        }
+
+
+class FeedIntakeResponseDTO(BaseModel):
+    id: int
+    pen_id: int
+    record_date: date
+    sheep_count: int
+    morning_feeding_amount_kg: Optional[float] = None
+    morning_box_weight_kg: Optional[float] = None
+    morning_remaining_feed_kg: Optional[float] = None
+    morning_feed_intake_kg: Optional[float] = None
+    afternoon_feeding_amount_kg: Optional[float] = None
+    afternoon_box_weight_kg: Optional[float] = None
+    afternoon_remaining_feed_kg: Optional[float] = None
+    afternoon_feed_intake_kg: Optional[float] = None
+    daily_total_feed_intake_kg: Optional[float] = None
+    avg_individual_intake_kg: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FeedIntakeTrendPoint(BaseModel):
+    date: str
+    pen_id: int
+    daily_total_feed_intake_kg: float
+    avg_individual_intake_kg: Optional[float] = None
+
+
+class FeedIntakeTrendResponseDTO(BaseModel):
+    pen_id: int
+    data: List[FeedIntakeTrendPoint]

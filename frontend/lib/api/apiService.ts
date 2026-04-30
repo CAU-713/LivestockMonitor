@@ -673,3 +673,350 @@ export const behaviorApi = {
     return res.data;
   },
 };
+
+// ============================================================
+// 疫病防治 API
+// ============================================================
+
+export interface VaccinationRecord {
+  id: number;
+  animal_id: number;
+  vaccine_name: string;
+  batch_number?: string;
+  vaccination_date: string;
+  next_due_date?: string;
+  dose_ml?: number;
+  vaccinator?: string;
+  notes?: string;
+}
+
+export interface MedicationRecord {
+  id: number;
+  animal_id: number;
+  disease_name: string;
+  drug_name: string;
+  dosage?: string;
+  treatment_start: string;
+  treatment_end?: string;
+  vet_name?: string;
+  outcome?: string;
+  notes?: string;
+}
+
+export interface DewormingRecord {
+  id: number;
+  animal_id: number;
+  drug_name: string;
+  dose_ml?: number;
+  deworming_date: string;
+  next_due_date?: string;
+  operator?: string;
+  notes?: string;
+}
+
+export interface UpcomingReminder {
+  type: string;
+  animal_id: number;
+  animal_name: string;
+  item_name: string;
+  due_date: string;
+  days_until_due: number;
+}
+
+export const medicalApi = {
+  // 疫苗接种
+  async getVaccinations(params: { animal_id?: number; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.animal_id) q.set('animal_id', String(params.animal_id));
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<VaccinationRecord>>>(`/api/medical/vaccination?${q}`);
+    return res.data;
+  },
+
+  async createVaccination(data: Omit<VaccinationRecord, 'id'>) {
+    const res = await apiFetch<ResponseDTO<VaccinationRecord>>('/api/medical/vaccination', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async deleteVaccination(id: number) {
+    await apiFetch<ResponseDTO<null>>(`/api/medical/vaccination/${id}`, { method: 'DELETE' });
+  },
+
+  // 用药记录
+  async getMedications(params: { animal_id?: number; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.animal_id) q.set('animal_id', String(params.animal_id));
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<MedicationRecord>>>(`/api/medical/medication?${q}`);
+    return res.data;
+  },
+
+  async createMedication(data: Omit<MedicationRecord, 'id'>) {
+    const res = await apiFetch<ResponseDTO<MedicationRecord>>('/api/medical/medication', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async deleteMedication(id: number) {
+    await apiFetch<ResponseDTO<null>>(`/api/medical/medication/${id}`, { method: 'DELETE' });
+  },
+
+  // 驱虫记录
+  async getDewormings(params: { animal_id?: number; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.animal_id) q.set('animal_id', String(params.animal_id));
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<DewormingRecord>>>(`/api/medical/deworming?${q}`);
+    return res.data;
+  },
+
+  async createDeworming(data: Omit<DewormingRecord, 'id'>) {
+    const res = await apiFetch<ResponseDTO<DewormingRecord>>('/api/medical/deworming', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async deleteDeworming(id: number) {
+    await apiFetch<ResponseDTO<null>>(`/api/medical/deworming/${id}`, { method: 'DELETE' });
+  },
+
+  // 到期提醒
+  async getUpcomingReminders(days: number = 7): Promise<UpcomingReminder[]> {
+    const res = await apiFetch<ResponseDTO<UpcomingReminder[]>>(`/api/medical/upcoming?days=${days}`);
+    return res.data;
+  },
+};
+
+// ============================================================
+// 生产管理 API（出栏/死亡）
+// ============================================================
+
+export interface SlaughterRecord {
+  id: number;
+  animal_id: number;
+  animal_name?: string;
+  slaughter_date: string;
+  slaughter_weight_kg?: number;
+  price_per_kg?: number;
+  total_price?: number;
+  buyer?: string;
+  destination?: string;
+  operator?: string;
+  notes?: string;
+}
+
+export interface MortalityRecord {
+  id: number;
+  animal_id: number;
+  animal_name?: string;
+  death_date: string;
+  cause?: string;
+  disposal_method?: string;
+  vet_confirmation: boolean;
+  loss_amount?: number;
+  notes?: string;
+}
+
+export interface ProductionStats {
+  month_slaughter_count: number;
+  month_mortality_count: number;
+  month_total_revenue: number;
+  mortality_rate: number;
+  total_slaughter_count: number;
+  total_mortality_count: number;
+}
+
+export const productionApi = {
+  async getSlaughters(params: { shed_id?: number; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.shed_id) q.set('shed_id', String(params.shed_id));
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<SlaughterRecord>>>(`/api/production/slaughter?${q}`);
+    return res.data;
+  },
+
+  async createSlaughter(data: Omit<SlaughterRecord, 'id' | 'animal_name'>) {
+    const res = await apiFetch<ResponseDTO<SlaughterRecord>>('/api/production/slaughter', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async getMortalities(params: { shed_id?: number; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.shed_id) q.set('shed_id', String(params.shed_id));
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<MortalityRecord>>>(`/api/production/mortality?${q}`);
+    return res.data;
+  },
+
+  async createMortality(data: Omit<MortalityRecord, 'id' | 'animal_name'>) {
+    const res = await apiFetch<ResponseDTO<MortalityRecord>>('/api/production/mortality', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async getStats(): Promise<ProductionStats> {
+    const res = await apiFetch<ResponseDTO<ProductionStats>>('/api/production/stats');
+    return res.data;
+  },
+};
+
+// ============================================================
+// 采食量 API
+// ============================================================
+
+export interface FeedIntakeRecord {
+  id: number;
+  pen_id: number;
+  record_date: string;
+  sheep_count: number;
+  morning_feeding_amount_kg?: number;
+  morning_box_weight_kg?: number;
+  morning_remaining_feed_kg?: number;
+  morning_feed_intake_kg?: number;
+  afternoon_feeding_amount_kg?: number;
+  afternoon_box_weight_kg?: number;
+  afternoon_remaining_feed_kg?: number;
+  afternoon_feed_intake_kg?: number;
+  daily_total_feed_intake_kg?: number;
+  avg_individual_intake_kg?: number;
+}
+
+export const feedApi = {
+  async getFeedIntakes(params: { pen_id?: number; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.pen_id) q.set('pen_id', String(params.pen_id));
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<FeedIntakeRecord>>>(`/api/health/feed-intake?${q}`);
+    return res.data;
+  },
+
+  async createFeedIntake(data: Omit<FeedIntakeRecord, 'id' | 'morning_feed_intake_kg' | 'afternoon_feed_intake_kg' | 'daily_total_feed_intake_kg' | 'avg_individual_intake_kg'>) {
+    const res = await apiFetch<ResponseDTO<FeedIntakeRecord>>('/api/health/feed-intake', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  async getFeedTrend(pen_id: number, days: number = 30) {
+    const res = await apiFetch<ResponseDTO<any>>(`/api/health/feed-intake/trend/${pen_id}?days=${days}`);
+    return res.data;
+  },
+};
+
+// ============================================================
+// 操作日志 API
+// ============================================================
+
+export interface OperationLog {
+  id: number;
+  operator_name: string;
+  operator_role: number;
+  action: string;
+  resource_type: string;
+  resource_id?: number;
+  resource_name?: string;
+  detail?: string;
+  ip_address?: string;
+  created_at: string;
+}
+
+export interface AuditStats {
+  total_7days: number;
+  by_action: { action: string; count: number }[];
+  by_resource_type: { action: string; count: number }[];
+}
+
+export const auditApi = {
+  async getLogs(params: { operator?: string; action?: string; resource_type?: string; start_date?: string; end_date?: string; page?: number; page_size?: number }) {
+    const q = new URLSearchParams();
+    if (params.operator) q.set('operator', params.operator);
+    if (params.action) q.set('action', params.action);
+    if (params.resource_type) q.set('resource_type', params.resource_type);
+    if (params.start_date) q.set('start_date', params.start_date);
+    if (params.end_date) q.set('end_date', params.end_date);
+    if (params.page) q.set('page', String(params.page));
+    if (params.page_size) q.set('page_size', String(params.page_size));
+    const res = await apiFetch<ResponseDTO<ListResponseData<OperationLog>>>(`/api/audit/logs?${q}`);
+    return res.data;
+  },
+
+  async getStats(): Promise<AuditStats> {
+    const res = await apiFetch<ResponseDTO<AuditStats>>('/api/audit/stats');
+    return res.data;
+  },
+};
+
+// ============================================================
+// 批量导入 API
+// ============================================================
+
+export interface ImportResult {
+  success_count: number;
+  fail_count: number;
+  errors: { row: number; reason: string }[];
+}
+
+export const importApi = {
+  async importAnimals(file: File): Promise<ImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/import/animals', { method: 'POST', body: formData });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || err.message || `HTTP ${response.status}`);
+    }
+    const res = await response.json() as ResponseDTO<ImportResult>;
+    return res.data;
+  },
+
+  async importWeightRecords(file: File): Promise<ImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('/api/import/health/weight', { method: 'POST', body: formData });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || err.message || `HTTP ${response.status}`);
+    }
+    const res = await response.json() as ResponseDTO<ImportResult>;
+    return res.data;
+  },
+
+  downloadAnimalTemplate() {
+    window.open('/api/import/template/animals', '_blank');
+  },
+
+  downloadWeightTemplate() {
+    window.open('/api/import/template/weight', '_blank');
+  },
+};
