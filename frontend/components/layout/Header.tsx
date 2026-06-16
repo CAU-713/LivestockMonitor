@@ -27,12 +27,22 @@ const pageTitleMap: Record<string, string> = {
   'settings': '系统设置',
   'monitor': '实时监控',
   'history': '历史数据',
+  'alerts': '告警中心',
+  'animals': '动物档案',
+  'breeding': '繁殖管理',
+  'feed': '饲料投喂',
+  'production': '生产管理',
 };
 
 const roleLabelMap: Record<string, { label: string; color: string; bg: string }> = {
   admin: { label: '管理员', color: '#1565C0', bg: 'rgba(21,101,192,0.1)' },
   research: { label: '科研模式', color: '#2E7D32', bg: 'rgba(46,125,50,0.1)' },
   guest: { label: '访客', color: '#6A1B9A', bg: 'rgba(106,27,154,0.1)' },
+};
+
+// 一级路径的父级菜单名映射，用于显示完整的面包屑层级
+const parentPathMap: Record<string, string> = {
+  'animals': '动物管理',
 };
 
 const getBreadcrumbs = (pathname: string): string[] => {
@@ -44,6 +54,11 @@ const Header = () => {
   const pathname = usePathname();
   const segments = pathname.split('/').filter(Boolean);
   const breadcrumbs = getBreadcrumbs(pathname);
+  const firstSeg = segments[0] || '';
+  // 一级路径时，若有父级映射则构造完整层级面包屑
+  const displayBreadcrumbs = breadcrumbs.length === 1 && parentPathMap[firstSeg]
+    ? [parentPathMap[firstSeg], ...breadcrumbs]
+    : breadcrumbs;
   const lastSeg = segments[segments.length - 1] || 'dashboard';
   const pageTitle = pageTitleMap[lastSeg] ?? lastSeg;
 
@@ -70,9 +85,9 @@ const Header = () => {
 
         {/* 面包屑 + 标题 */}
         <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {breadcrumbs.length > 1 && (
+          {displayBreadcrumbs.length > 1 && (
             <>
-              {breadcrumbs.slice(0, -1).map((crumb, idx) => (
+              {displayBreadcrumbs.slice(0, -1).map((crumb, idx) => (
                 <React.Fragment key={idx}>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.82rem' }}>{crumb}</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mx: 0.25, fontSize: '0.82rem' }}>/</Typography>
