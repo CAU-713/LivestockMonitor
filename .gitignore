@@ -350,4 +350,4 @@ cython_debug/
 
 # CodeFlicker IDE workspace files
 .codeflicker/
-
+.codebuddy/
