@@ -1,7 +1,6 @@
 # 大型依赖 - 不常变化，单独作为 Docker 缓存层
 # 修改此文件会触发完整重装，请尽量保持稳定
-ultralytics==8.3.229
-opencv-python-headless==4.11.0.86
+# torch/ultralytics/opencv 已移除（暂无摄像头AI推理需求）
 numpy==1.26.4
 pandas==2.2.2
 scipy>=1.10.0

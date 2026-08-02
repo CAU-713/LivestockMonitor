@@ -6,11 +6,6 @@ RUN sed -i 's|deb.debian.org|mirrors.cloud.tencent.com|g' /etc/apt/sources.list.
     && apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxrender1 \
-    libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 # === 第一层：大型稳定依赖（ultralytics/torch/opencv 等）===

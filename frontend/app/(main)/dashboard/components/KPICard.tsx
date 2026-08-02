@@ -10,6 +10,7 @@ interface KPICardProps {
   accentColor?: string;   // 图标区和左侧色条颜色
   bgColor?: string;       // 图标背景色
   subtitle?: string;      // 底部小文字描述（可选）
+  href?: string;          // 点击跳转链接（可选）
 }
 
 const KPICard: React.FC<KPICardProps> = ({
@@ -21,6 +22,7 @@ const KPICard: React.FC<KPICardProps> = ({
   accentColor = '#2E7D32',
   bgColor = '#E8F5E9',
   subtitle,
+  href,
 }) => {
 
   const getValueColor = () => {
@@ -52,12 +54,18 @@ const KPICard: React.FC<KPICardProps> = ({
   return (
     <Paper
       elevation={2}
+      component={href ? 'a' : 'div'}
+      href={href}
       sx={{
         p: 2.5,
         borderRadius: 3,
         height: '100%',
+        display: 'block',
         borderLeft: `4px solid ${accentColor}`,
         transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+        textDecoration: 'none',
+        color: 'inherit',
+        cursor: href ? 'pointer' : 'default',
         '&:hover': {
           boxShadow: `0 6px 20px rgba(0,0,0,0.12)`,
           transform: 'translateY(-2px)',
@@ -66,18 +74,19 @@ const KPICard: React.FC<KPICardProps> = ({
         overflow: 'hidden',
       }}
     >
-      {/* 右上角装饰半圆 */}
+      {/* 右上角装饰圆 */}
       <Box
         sx={{
           position: 'absolute',
-          top: -20,
-          right: -20,
+          top: -30,
+          right: -30,
           width: 80,
           height: 80,
           borderRadius: '50%',
           backgroundColor: bgColor,
-          opacity: 0.6,
+          opacity: 0.4,
           pointerEvents: 'none',
+          zIndex: 0,
         }}
       />
 

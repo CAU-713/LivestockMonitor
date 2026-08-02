@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     redis_host: str = "redis"
     redis_port: int = 6379
 
+    # sparks MySQL 配置（真实物联网数据源）
+    sparks_mysql_host: str = os.getenv("SPARKS_MYSQL_HOST", "gz-cynosdbmysql-grp-rblfo92p.sql.tencentcdb.com")
+    sparks_mysql_port: int = int(os.getenv("SPARKS_MYSQL_PORT", "26950"))
+    sparks_mysql_user: str = os.getenv("SPARKS_MYSQL_USER", "admin")
+    sparks_mysql_password: str = os.getenv("SPARKS_MYSQL_PASSWORD", "Anhui123")
+    sparks_mysql_database: str = os.getenv("SPARKS_MYSQL_DATABASE", "sparks")
+    sparks_mysql_pool_min: int = 2
+    sparks_mysql_pool_max: int = 10
+
     class Config:
         env_file = ".env"
 

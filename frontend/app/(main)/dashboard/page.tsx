@@ -1,148 +1,97 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Grid from '@mui/material/GridLegacy';
 import {
   Paper,
   Typography,
   Stack,
-  Button,
   Box,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  SelectChangeEvent,
+  CircularProgress,
   Chip,
   Divider,
-  CircularProgress,
 } from '@mui/material';
-import Link from 'next/link';
-
-// Import Icons for KPIs
-import PetsIcon from '@mui/icons-material/Pets';
-import DevicesIcon from '@mui/icons-material/Devices';
-import ThermostatIcon from '@mui/icons-material/Thermostat';
-import HomeWorkIcon from '@mui/icons-material/HomeWork';
-import ThermostatAutoIcon from '@mui/icons-material/ThermostatAuto';
-import WaterDropIcon from '@mui/icons-material/WaterDrop';
-import AirIcon from '@mui/icons-material/Air';
-import Co2Icon from '@mui/icons-material/Co2';
-import OpacityIcon from '@mui/icons-material/Opacity';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import BubbleChartIcon from '@mui/icons-material/BubbleChart';
-import GrainIcon from '@mui/icons-material/Grain';
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-
-// Import Components and Data
+import {
+  DevicesOther as DevicesIcon,
+  WifiOff as OfflineIcon,
+  NotificationsActive as AlertIcon,
+  Sensors as SensorsIcon,
+  ThermostatAuto as TempIcon,
+  WaterDrop as HumIcon,
+  Co2 as Co2Icon,
+  Air as WindIcon,
+  LightMode as LightIcon,
+} from '@mui/icons-material';
 import KPICard from './components/KPICard';
-import DeviceStatusList from './components/AlertList';
-import ComfortAssessmentPanel from './components/ComfortAssessmentPanel';
 import LineChart from '../../../components/charts/LineChart';
 import {
-  mockOverallTemperatureTrend,
-  mockOverallHumidityTrend,
-  mockOfflineDevices,
-  mockSheds as fallbackSheds,
-  mockSensors as fallbackSensors,
-} from '../../../constants/mockData';
-import type { ComfortAssessment } from './components/ComfortAssessmentPanel';
-import { MergedChartData } from '@/types';
-import type { Shed, Sensor } from '@/types';
-import { shedApi, sensorApi } from '@/lib/api/apiService';
+  getPoints,
+  getMultiPointHistory,
+  getDeviceStatus,
+  getOverview,
+  type SparkPoint,
+  type SparkHistoryItem,
+  type SparkDeviceStatus,
+  type SparkOverview,
+} from '@/lib/api/sparksApi';
+import type { MergedChartData } from '@/types';
 
-type ChartType = 'temperature' | 'humidity';
 type KPIStatus = 'normal' | 'warning' | 'danger';
 
-const kpiConfig = [
-  { id: 'livestock', accentColor: '#2E7D32', bgColor: '#E8F5E9' },
-  { id: 'area', accentColor: '#1565C0', bgColor: '#E3F2FD' },
-  { id: 'devices', accentColor: '#6A1B9A', bgColor: '#F3E5F5' },
-  { id: 'temp', accentColor: '#E65100', bgColor: '#FFF3E0' },
+// ==================== 传感器类型分组 ====================
+
+interface PointGroup {
+  type: string;
+  type_name: string;
+  icon: React.ReactNode;
+  unit: string;
+  chipBg: string;
+  chipColor: string;
+  points: SparkPoint[];
+}
+
+const groupConfig: Omit<PointGroup, 'points'>[] = [
+  { type: 'Temperature', type_name: '温度', icon: <TempIcon sx={{ fontSize: 14 }} />, unit: '°C', chipBg: '#FFF3E0', chipColor: '#E65100' },
+  { type: 'Humidity', type_name: '湿度', icon: <HumIcon sx={{ fontSize: 14 }} />, unit: '%RH', chipBg: '#E3F2FD', chipColor: '#1565C0' },
+  { type: 'CO2', type_name: 'CO₂', icon: <Co2Icon sx={{ fontSize: 14 }} />, unit: 'ppm', chipBg: '#E8EAF6', chipColor: '#283593' },
+  { type: 'Light', type_name: '光照', icon: <LightIcon sx={{ fontSize: 14 }} />, unit: 'lux', chipBg: '#FFFDE7', chipColor: '#F9A825' },
+  { type: 'WindSpeed', type_name: '风速', icon: <WindIcon sx={{ fontSize: 14 }} />, unit: 'm/s', chipBg: '#E8F5E9', chipColor: '#2E7D32' },
 ];
 
-const sensorIconMap: Record<string, React.ReactNode> = {
-  Temperature: <ThermostatAutoIcon sx={{ fontSize: 14 }} />,
-  Humidity: <WaterDropIcon sx={{ fontSize: 14 }} />,
-  WindSpeed: <AirIcon sx={{ fontSize: 14 }} />,
-  Ammonia: <BubbleChartIcon sx={{ fontSize: 14 }} />,
-  CO2: <Co2Icon sx={{ fontSize: 14 }} />,
-  CH4: <GrainIcon sx={{ fontSize: 14 }} />,
-  Oxygen: <OpacityIcon sx={{ fontSize: 14 }} />,
-  H2S: <BubbleChartIcon sx={{ fontSize: 14 }} />,
-  PM: <GrainIcon sx={{ fontSize: 14 }} />,
-  Light: <LightModeIcon sx={{ fontSize: 14 }} />,
-};
+// ==================== 图表配置 ====================
 
-const basicSensorTypes = ['Temperature', 'Humidity', 'WindSpeed'];
-const gasSensorTypes = ['Ammonia', 'CO2', 'CH4', 'Oxygen', 'H2S', 'PM', 'Light'];
-
-const sensorFormatMap: Record<string, { unit: string; label: string }> = {
-  Temperature: { unit: '°C', label: '温度' },
-  Humidity: { unit: '%', label: '湿度' },
-  WindSpeed: { unit: 'm/s', label: '风速' },
-  Ammonia: { unit: 'ppm', label: 'NH₃' },
-  CO2: { unit: 'ppm', label: 'CO₂' },
-  CH4: { unit: 'ppm', label: 'CH₄' },
-  Oxygen: { unit: '%', label: 'O₂' },
-  H2S: { unit: 'ppm', label: 'H₂S' },
-  PM: { unit: 'μg/m³', label: 'PM2.5' },
-  Light: { unit: 'lux', label: '光照' },
-};
-
-const sensorChipColors: Record<string, { bg: string; color: string }> = {
-  Temperature: { bg: '#FFF3E0', color: '#E65100' },
-  Humidity: { bg: '#E3F2FD', color: '#1565C0' },
-  WindSpeed: { bg: '#E8F5E9', color: '#2E7D32' },
-  Ammonia: { bg: '#F3E5F5', color: '#6A1B9A' },
-  CO2: { bg: '#E8EAF6', color: '#283593' },
-  CH4: { bg: '#FCE4EC', color: '#880E4F' },
-  Oxygen: { bg: '#E0F2F1', color: '#00695C' },
-  H2S: { bg: '#FFF8E1', color: '#F57F17' },
-  PM: { bg: '#EFEBE9', color: '#4E342E' },
-  Light: { bg: '#FFFDE7', color: '#F9A825' },
-};
-
-const assessEnvironment = (
-  temp?: number | string,
-  humidity?: number | string,
-  wind?: number | string,
-  radiation?: number | string
-): ComfortAssessment => {
-  const t = typeof temp === 'number' ? temp : parseFloat(String(temp));
-  const h = typeof humidity === 'number' ? humidity : parseFloat(String(humidity));
-  const w = typeof wind === 'number' ? wind : parseFloat(String(wind));
-  const r = typeof radiation === 'number' ? radiation : parseFloat(String(radiation));
-
-  if (t > 4.6 && t < 6.7 && h > 66 && h < 88 && w < 0.4 && r > 9290.16 && r < 0.5) {
-    return { status: 'comfort', label: '正常阶段', color: '#4CAF50', backgroundColor: '#4CAF50', description: '满足正常阶段所有条件' };
-  }
-  if (t > 1.9 && t < 4.5 && h > 76 && h < 88 && w < 9340.48 && r > 0.27 && r < 0.43) {
-    return { status: 'cold-stress', label: '轻度冷应激', color: '#FF9800', backgroundColor: '#FF9800', description: '满足轻度冷应激条件，需关注保温和供暖' };
-  }
-  if (t < 2 && h > 65 && h < 76 && w > 0.5 && w < 9390.92 && r > -0.6 && r < 0.27) {
-    return { status: 'cold-stress', label: '重度冷应激', color: '#F44336', backgroundColor: '#F44336', description: '满足重度冷应激条件，需立即采取保暖措施' };
-  }
-  return { status: 'cold-stress', label: '未定义', color: '#9E9E9E', backgroundColor: '#9E9E9E', description: '当前环境参数未命中给定规则' };
+const chartTypeConfig: Record<string, { label: string; color: string; unit: string }> = {
+  Temperature: { label: '温度趋势', color: '#E65100', unit: '°C' },
+  Humidity: { label: '湿度趋势', color: '#1565C0', unit: '%RH' },
+  CO2: { label: 'CO₂ 趋势', color: '#283593', unit: 'ppm' },
+  Light: { label: '光照趋势', color: '#F9A825', unit: 'lux' },
+  WindSpeed: { label: '风速趋势', color: '#2E7D32', unit: 'm/s' },
 };
 
 const DashboardPage = () => {
-  const [selectedChart, setSelectedChart] = useState<ChartType>('temperature');
-  const [sheds, setSheds] = useState<Shed[]>(fallbackSheds);
-  const [sensors, setSensors] = useState<Sensor[]>(fallbackSensors);
+  // 状态
   const [loading, setLoading] = useState(true);
+  const [points, setPoints] = useState<SparkPoint[]>([]);
+  const [overview, setOverview] = useState<SparkOverview | null>(null);
+  const [deviceStatus, setDeviceStatus] = useState<SparkDeviceStatus | null>(null);
+  const [chartData, setChartData] = useState<MergedChartData | null>(null);
+  const [selectedChartType, setSelectedChartType] = useState('Temperature');
+  const [chartLoading, setChartLoading] = useState(false);
 
+  // 加载基础数据
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [shedData, sensorData] = await Promise.all([
-          shedApi.getSheds(),
-          sensorApi.getSensors({ page_size: 500 }),
+        const [pointsRes, overviewRes, deviceRes] = await Promise.all([
+          getPoints(),
+          getOverview(),
+          getDeviceStatus(),
         ]);
-        if (shedData.length > 0) setSheds(shedData);
-        if (sensorData.length > 0) setSensors(sensorData);
+        setPoints(pointsRes.points || []);
+        setOverview(overviewRes);
+        setDeviceStatus(deviceRes);
       } catch (e) {
-        console.warn('Dashboard load failed, using mock data', e);
+        console.error('Dashboard load failed:', e);
       } finally {
         setLoading(false);
       }
@@ -150,178 +99,267 @@ const DashboardPage = () => {
     loadData();
   }, []);
 
-  const handleChartChange = (event: SelectChangeEvent<string>) => {
-    setSelectedChart(event.target.value as ChartType);
-  };
+  // 加载趋势图数据
+  const loadChartData = useCallback(async (sensorType: string) => {
+    setChartLoading(true);
+    try {
+      const typePoints = points.filter((p) => p.type === sensorType);
+      if (typePoints.length === 0) {
+        setChartData(null);
+        return;
+      }
 
-  const chartDataMap: Record<ChartType, MergedChartData> = {
-    temperature: mockOverallTemperatureTrend,
-    humidity: mockOverallHumidityTrend,
-  };
+      // 取该类型的前 3 个测点做趋势
+      const pointIds = typePoints.slice(0, 3).map((p) => p.point_id);
+      const now = new Date();
+      const start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-  // 计算 KPI
-  const totalLivestock = sheds.reduce((sum, s) => sum + (s.livestockCount || 0), 0);
-  const totalArea = sheds.reduce((sum, s) => sum + (s.area || 0), 0);
-  const onlineSensors = sensors.filter((s) => s.status === 'active').length;
-  const avgTemp = sensors.filter((s) => s.type === 'Temperature' && s.lastReading != null)
-    .reduce((sum, s, _, arr) => sum + s.lastReading! / arr.length, 0);
+      const history = await getMultiPointHistory({
+        point_ids: pointIds,
+        start,
+        end: now.toISOString(),
+        granularity: 'hour',
+        limit: 500,
+      });
+
+      // 按时间分组，取平均值
+      const timeMap: Record<string, { sum: number; count: number }> = {};
+      history.forEach((item) => {
+        const t = item.record_time || '';
+        if (!t) return;
+        const val = item.avg_value ?? parseFloat(item.value || '0');
+        // value 为 0 也是合法数据，只跳过非数字
+        if (typeof val !== 'number' || isNaN(val)) return;
+        if (!timeMap[t]) timeMap[t] = { sum: 0, count: 0 };
+        timeMap[t].sum += val;
+        timeMap[t].count += 1;
+      });
+
+      const data = Object.entries(timeMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-24)
+        .map(([time, { sum, count }]) => ({
+          time: time.substring(11, 16), // HH:mm
+          value: parseFloat((sum / count).toFixed(1)),
+          range: [0, 0] as [number, number],
+        }));
+
+      const cfg = chartTypeConfig[sensorType];
+      setChartData({
+        title: cfg.label,
+        sensorType,
+        unit: cfg.unit,
+        lines: [{ dataKey: 'value', name: cfg.label, color: cfg.color }],
+        data,
+      });
+    } catch (e) {
+      console.error('Chart data load failed:', e);
+      setChartData(null);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [points]);
+
+  // 初始加载 + 类型切换
+  useEffect(() => {
+    if (points.length > 0) {
+      loadChartData(selectedChartType);
+    }
+  }, [points, selectedChartType, loadChartData]);
+
+  // ==================== 按类型分组测点 ====================
+
+  const pointGroups: PointGroup[] = groupConfig.map((cfg) => ({
+    ...cfg,
+    points: points.filter((p) => p.type === cfg.type),
+  })).filter((g) => g.points.length > 0);
+
+  // ==================== KPI ====================
+
+  const isOnline = deviceStatus?.is_online ?? false;
+  const lossRate = deviceStatus?.loss_rate ?? 0;
+  const csq = overview?.gateway_csq ?? -1;
 
   const kpiData = [
-    { id: 'livestock', title: '养殖动物总数', icon: <PetsIcon />, value: totalLivestock, unit: '只', status: 'normal' as KPIStatus, subtitle: '全场存栏量' },
-    { id: 'area', title: '畜舍总面积', icon: <HomeWorkIcon />, value: totalArea || '—', unit: totalArea ? '㎡' : undefined, status: 'normal' as KPIStatus, subtitle: '可用养殖空间' },
-    { id: 'devices', title: '工作设备数', icon: <DevicesIcon />, value: `${onlineSensors} / ${sensors.length}`, unit: undefined, status: 'normal' as KPIStatus, subtitle: '在线传感器' },
-    { id: 'temp', title: '畜舍平均温度', icon: <ThermostatIcon />, value: avgTemp ? parseFloat(avgTemp.toFixed(1)) : '—', unit: avgTemp ? '°C' : undefined, status: (avgTemp > 25 ? 'warning' : 'normal') as KPIStatus, subtitle: '所有羊舍均值' },
+    {
+      title: '设备在线状态',
+      icon: <DevicesIcon />,
+      value: isOnline ? '在线' : '离线',
+      unit: undefined,
+      status: (isOnline ? 'normal' : 'danger') as KPIStatus,
+      subtitle: lossRate > 0 ? `丢包率 ${(lossRate * 100).toFixed(1)}%` : '通信正常',
+    },
+    {
+      title: '未处理告警',
+      icon: <AlertIcon />,
+      value: 0,
+      unit: '条',
+      status: 'normal' as KPIStatus,
+      subtitle: '暂无待处理告警',
+      href: '/alerts',
+    },
+    {
+      title: '测点总数',
+      icon: <SensorsIcon />,
+      value: overview?.total_points ?? points.length,
+      unit: '个',
+      status: 'normal' as KPIStatus,
+      subtitle: '环境监测点位',
+    },
+    {
+      title: '离线设备',
+      icon: <OfflineIcon />,
+      value: isOnline ? 0 : 1,
+      unit: '台',
+      status: (isOnline ? 'normal' : 'danger') as KPIStatus,
+      subtitle: isOnline ? '全部在线' : '设备离线',
+    },
   ];
+
+  // ==================== 渲染 ====================
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Grid container spacing={3}>
       {/* Row 1: KPIs */}
-      {kpiData.map((kpi) => {
-        const cfg = kpiConfig.find((c) => c.id === kpi.id);
-        return (
-          <Grid item xs={12} sm={6} md={3} key={kpi.id}>
-            <KPICard
-              title={kpi.title}
-              icon={kpi.icon}
-              value={kpi.value as any}
-              unit={kpi.unit}
-              status={kpi.status}
-              accentColor={cfg?.accentColor}
-              bgColor={cfg?.bgColor}
-              subtitle={kpi.subtitle}
-            />
-          </Grid>
-        );
-      })}
+      {kpiData.map((kpi, idx) => (
+        <Grid item xs={12} sm={6} md={3} key={idx}>
+          <KPICard
+            title={kpi.title}
+            icon={kpi.icon}
+            value={kpi.value}
+            unit={kpi.unit}
+            status={kpi.status}
+            accentColor={['#2E7D32', '#1565C0', '#6A1B9A', '#E65100'][idx]}
+            bgColor={['#E8F5E9', '#E3F2FD', '#F3E5F5', '#FFF3E0'][idx]}
+            subtitle={kpi.subtitle}
+            href={(kpi as any).href}
+          />
+        </Grid>
+      ))}
 
-      {/* Row 2: 趋势图 + 告警列表（保持 mock 数据）*/}
+      {/* Row 2: 趋势图 */}
       <Grid item xs={12} lg={8} sx={{ height: 430 }}>
         <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3, height: '100%', borderTop: '4px solid #2E7D32' }}>
-          <Stack direction="row" alignItems="center" mb={2} spacing={2}>
-            <Typography variant="h6" fontWeight={700}>畜舍总体趋势</Typography>
-            <FormControl size="small" sx={{ minWidth: 110 }}>
-              <InputLabel>指标</InputLabel>
-              <Select value={selectedChart} label="指标" onChange={handleChartChange}>
-                <MenuItem value="temperature">温度</MenuItem>
-                <MenuItem value="humidity">湿度</MenuItem>
-              </Select>
-            </FormControl>
+          <Stack direction="row" alignItems="center" spacing={2} mb={2}>
+            <Typography variant="h6" fontWeight={700}>24 小时趋势图</Typography>
+            <Stack direction="row" spacing={0.5}>
+              {Object.keys(chartTypeConfig).map((type) => (
+                <Chip
+                  key={type}
+                  label={chartTypeConfig[type].label.replace('趋势', '')}
+                  size="small"
+                  variant={selectedChartType === type ? 'filled' : 'outlined'}
+                  color={selectedChartType === type ? 'primary' : 'default'}
+                  onClick={() => setSelectedChartType(type)}
+                  sx={{ cursor: 'pointer', fontWeight: 600 }}
+                />
+              ))}
+            </Stack>
           </Stack>
-          <LineChart chartData={chartDataMap[selectedChart]} />
+          {chartLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+              <CircularProgress size={32} />
+            </Box>
+          ) : chartData ? (
+            <LineChart chartData={chartData} />
+          ) : (
+            <Box display="flex" justifyContent="center" alignItems="center" height="calc(100% - 60px)">
+              <Typography color="text.secondary">暂无数据</Typography>
+            </Box>
+          )}
         </Paper>
       </Grid>
+
+      {/* Row 2: 设备状态 */}
       <Grid item xs={12} lg={4}>
-        <DeviceStatusList devices={mockOfflineDevices} />
-      </Grid>
-
-      {/* Row 3: 各区域概览 */}
-      <Grid item xs={12}>
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Typography variant="h6" fontWeight={700}>各区域概览</Typography>
-          {loading ? (
-            <CircularProgress size={16} />
-          ) : (
-            <Chip label={`共 ${sheds.length} 个区域`} size="small" sx={{ backgroundColor: 'rgba(46,125,50,0.1)', color: '#2E7D32', fontWeight: 600 }} />
-          )}
-        </Stack>
-      </Grid>
-
-      {sheds.map((shed) => {
-        const shedSensors = sensors.filter((s) => s.shedId === shed.id);
-
-        const getSensorReading = (type: string): string | number => {
-          return shedSensors.find((s) => s.type === type)?.lastReading ?? 'N/A';
-        };
-
-        const getSensorValue = (type: string) =>
-          shedSensors.find((s) => s.type === type)?.lastReading as number | undefined;
-
-        const envTemp = getSensorValue('Temperature') ?? getSensorReading('Temperature');
-        const envHumidity = getSensorValue('Humidity') ?? getSensorReading('Humidity');
-        const envWind = getSensorValue('WindSpeed') ?? getSensorReading('WindSpeed');
-        const computedAssessment = assessEnvironment(envTemp, envHumidity, envWind);
-
-        return (
-          <Grid item xs={12} md={6} key={shed.id}>
-            <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden', transition: 'box-shadow 0.2s ease', '&:hover': { boxShadow: '0 6px 20px rgba(46,125,50,0.15)' } }}>
-              <Box sx={{ height: 4, background: 'linear-gradient(90deg, #1B5E20, #66BB6A)' }} />
-              <Box sx={{ p: 2.5 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Box>
-                    <Typography variant="h6" fontWeight={700}>{shed.name}</Typography>
-                    <Stack direction="row" alignItems="center" spacing={1} mt={0.25}>
-                      <Chip
-                        icon={<PetsIcon sx={{ fontSize: '12px !important' }} />}
-                        label={`${shed.livestockCount} 只动物`}
-                        size="small"
-                        sx={{ backgroundColor: '#E8F5E9', color: '#2E7D32', fontWeight: 600, fontSize: '0.72rem', height: 22 }}
-                      />
-                    </Stack>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    component={Link}
-                    href={`/monitor/environmental-data?shed=${shed.id}`}
-                    size="small"
-                    endIcon={<ArrowForwardIosIcon sx={{ fontSize: '12px !important' }} />}
-                    sx={{ whiteSpace: 'nowrap', borderRadius: 2 }}
-                  >
-                    进入监控
-                  </Button>
-                </Stack>
-
-                <Divider sx={{ mb: 2 }} />
-
-                <Box mb={1.5}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
-                    基础环境
-                  </Typography>
-                  <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                    {basicSensorTypes.map((type) => {
-                      const fmt = sensorFormatMap[type];
-                      const reading = getSensorReading(type);
-                      const chipStyle = sensorChipColors[type] || { bg: '#f5f5f5', color: '#555' };
-                      return (
-                        <Chip
-                          key={type}
-                          icon={<Box sx={{ display: 'flex', color: chipStyle.color }}>{sensorIconMap[type]}</Box>}
-                          label={`${fmt.label} ${reading}${reading !== 'N/A' ? fmt.unit : ''}`}
-                          size="small"
-                          sx={{ backgroundColor: chipStyle.bg, color: chipStyle.color, fontWeight: 600, fontSize: '0.72rem', height: 24, '& .MuiChip-icon': { color: chipStyle.color, ml: '6px' } }}
-                        />
-                      );
-                    })}
-                  </Stack>
-                </Box>
-
-                <Box mb={2}>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.68rem' }}>
-                    气体指标
-                  </Typography>
-                  <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                    {gasSensorTypes.map((type) => {
-                      const fmt = sensorFormatMap[type];
-                      const reading = getSensorReading(type);
-                      const chipStyle = sensorChipColors[type] || { bg: '#f5f5f5', color: '#555' };
-                      return (
-                        <Chip
-                          key={type}
-                          icon={<Box sx={{ display: 'flex', color: chipStyle.color }}>{sensorIconMap[type]}</Box>}
-                          label={`${fmt.label} ${reading}${reading !== 'N/A' ? fmt.unit : ''}`}
-                          size="small"
-                          sx={{ backgroundColor: chipStyle.bg, color: chipStyle.color, fontWeight: 600, fontSize: '0.72rem', height: 24, '& .MuiChip-icon': { color: chipStyle.color, ml: '6px' } }}
-                        />
-                      );
-                    })}
-                  </Stack>
-                </Box>
-
-                <ComfortAssessmentPanel assessment={computedAssessment} />
+        <Paper elevation={2} sx={{ p: 2.5, borderRadius: 3, height: '100%', borderTop: '4px solid #E65100' }}>
+          <Typography variant="h6" fontWeight={700} mb={2}>设备通信状态</Typography>
+          {deviceStatus ? (
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">设备 ID</Typography>
+                <Typography fontWeight={600}>{deviceStatus.device_id || 'PLC'}</Typography>
               </Box>
-            </Paper>
-          </Grid>
-        );
-      })}
+              <Box>
+                <Typography variant="caption" color="text.secondary">网关 MAC</Typography>
+                <Typography fontWeight={600} sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                  {deviceStatus.gateway_mac || '—'}
+                </Typography>
+              </Box>
+              <Divider />
+              <Stack direction="row" justifyContent="space-between">
+                <Box>
+                  <Typography variant="caption" color="text.secondary">累计通信</Typography>
+                  <Typography fontWeight={600}>{deviceStatus.comm_total_cnt?.toLocaleString() ?? 0} 次</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">失败次数</Typography>
+                  <Typography fontWeight={600} color={deviceStatus.comm_fail_cnt > 0 ? 'error.main' : 'success.main'}>
+                    {deviceStatus.comm_fail_cnt ?? 0}
+                  </Typography>
+                </Box>
+              </Stack>
+              <Box>
+                <Typography variant="caption" color="text.secondary">最近通信</Typography>
+                <Typography fontWeight={600} sx={{ fontSize: '0.85rem' }}>
+                  {deviceStatus.last_comm_time || '—'}
+                </Typography>
+              </Box>
+            </Stack>
+          ) : (
+            <Typography color="text.secondary">暂无数据</Typography>
+          )}
+        </Paper>
+      </Grid>
+
+      {/* Row 3: 按类型分组展示测点 */}
+      <Grid item xs={12}>
+        <Typography variant="h6" fontWeight={700} mb={2}>
+          测点概览
+          <Chip label={`共 ${points.length} 个测点`} size="small" sx={{ ml: 1.5, backgroundColor: 'rgba(46,125,50,0.1)', color: '#2E7D32', fontWeight: 600 }} />
+        </Typography>
+      </Grid>
+
+      {pointGroups.map((group) => (
+        <Grid item xs={12} md={6} lg={4} key={group.type}>
+          <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
+            <Box sx={{ height: 4, background: `linear-gradient(90deg, ${group.chipColor}, ${group.chipColor}88)` }} />
+            <Box sx={{ p: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} mb={1.5}>
+                <Box sx={{ color: group.chipColor }}>{group.icon}</Box>
+                <Typography variant="subtitle1" fontWeight={700}>{group.type_name}</Typography>
+                <Chip label={`${group.points.length} 个`} size="small" sx={{ backgroundColor: group.chipBg, color: group.chipColor, fontWeight: 600, fontSize: '0.7rem', height: 20 }} />
+              </Stack>
+              <Divider sx={{ mb: 1 }} />
+              <Stack spacing={0.5}>
+                {group.points.slice(0, 8).map((p) => (
+                  <Stack key={p.point_id} direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {p.point_name || p.point_id}
+                    </Typography>
+                    <Typography variant="body2" fontWeight={700} sx={{ ml: 1, color: group.chipColor }}>
+                      {p.value} {group.unit}
+                    </Typography>
+                  </Stack>
+                ))}
+                {group.points.length > 8 && (
+                  <Typography variant="caption" color="text.secondary" textAlign="center">
+                    ... 还有 {group.points.length - 8} 个测点
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
+          </Paper>
+        </Grid>
+      ))}
     </Grid>
   );
 };

@@ -138,7 +138,7 @@ export interface YAxisConfig {
  */
 export interface MergedChartData {
   title: string; // The overall title of the chart, e.g., 'Temperature'
-  sensorType: Sensor['type'] | 'Mixed';
+  sensorType: string;
   unit?: string;
   yAxes?: YAxisConfig[];
   lines: ChartLine[]; // An array of lines to draw

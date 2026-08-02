@@ -58,14 +58,14 @@ const LineChart: React.FC<LineChartProps> = ({ chartData }) => {
           )}
 
           <Tooltip
-            formatter={(value: number, name: string, item: any) => {
+            formatter={(value: any, name: any, item: any): any => {
               const line = lines.find((l) => l.dataKey === item.dataKey);
               let suffix = unit || '';
               if (line?.yAxisId && yAxes) {
                 const axis = yAxes.find((a) => a.id === line.yAxisId);
                 if (axis) suffix = axis.unit;
               }
-              return [`${value} ${suffix}`, name];
+              return [`${value ?? ''} ${suffix}`, name ?? ''];
             }}
           />
           <Legend />

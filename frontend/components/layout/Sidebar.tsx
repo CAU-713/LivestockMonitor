@@ -252,47 +252,8 @@ const Sidebar = () => {
           <ListItemText primary="告警中心" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/alerts') ? 600 : 400 }} />
         </ListItemButton>
 
-        {/* 动物档案（可展开） */}
-        <ListItemButton onClick={() => setAnimalsOpen(!animalsOpen)} sx={parentMenuSx(animalsOpen)}>
-          <ListItemIcon sx={parentIconSx(animalsOpen)}>
-            <PetsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="动物管理" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }} />
-          {animalsOpen
-            ? <ExpandLess sx={{ color: 'rgba(255,255,255,0.65)', fontSize: 18 }} />
-            : <ExpandMore sx={{ color: 'rgba(255,255,255,0.65)', fontSize: 18 }} />
-          }
-        </ListItemButton>
-        <Collapse in={animalsOpen} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItemButton component={Link} href="/animals" sx={{ ...menuItemSx('/animals'), pl: 4 }}>
-              <ListItemIcon sx={iconSx('/animals')}>
-                <PetsIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="动物档案" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/animals') ? 600 : 400 }} />
-            </ListItemButton>
-            <ListItemButton component={Link} href="/animals/feed" sx={{ ...menuItemSx('/animals/feed'), pl: 4 }}>
-              <ListItemIcon sx={iconSx('/animals/feed')}>
-                <GrassIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="饲料投喂" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/animals/feed') ? 600 : 400 }} />
-            </ListItemButton>
-            <ListItemButton component={Link} href="/animals/production" sx={{ ...menuItemSx('/animals/production'), pl: 4 }}>
-              <ListItemIcon sx={iconSx('/animals/production')}>
-                <TrendingUpIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="生产管理" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: isActive('/animals/production') ? 600 : 400 }} />
-            </ListItemButton>
-          </List>
-        </Collapse>
-
-        {/* 繁殖管理 */}
-        <ListItemButton component={Link} href="/breeding" sx={menuItemSx('/breeding')}>
-          <ListItemIcon sx={iconSx('/breeding')}>
-            <ChildCareIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="繁殖管理" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/breeding') ? 600 : 400 }} />
-        </ListItemButton>
+        {/* 动物管理 - 暂时隐藏（暂无数据） */}
+        {/* 繁殖管理 - 暂时隐藏（暂无数据） */}
       </List>
 
       {/* 底部：设置 */}
