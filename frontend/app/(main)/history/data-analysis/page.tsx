@@ -3,18 +3,19 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Box, Card, CardContent, Typography, Tabs, Tab, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, Paper, Stack, CircularProgress, Chip, Grid, Divider, Button,
+  Box, Typography, Tabs, Tab, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, Paper, Stack, CircularProgress, Chip, Grid, Button, TextField,
 } from '@mui/material';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ScatterPlotIcon from '@mui/icons-material/ScatterPlot';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs, { Dayjs } from 'dayjs';
 import { getPoints, getMultiPointHistory, type SparkPoint, type SparkHistoryItem } from '@/lib/api/sparksApi';
-import { typeNameMap, typeColorMap, getUnit } from '@/constants/sensorTypes';
+import { typeNameMap, typeColorMap, getUnit, isBoolPoint } from '@/constants/sensorTypes';
 
 const ACCENT = '#2E7D32';
 const ACCENT_LIGHT = 'rgba(46,125,50,0.08)';
@@ -25,6 +26,20 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 interface VarStat { variable: string; type: string; mean: number; std: number; min: number; max: number; count: number; unit: string; }
+
+interface ExceedStat {
+  variable: string;
+  type: string;
+  unit: string;
+  threshold: number;
+  exceedCount: number;
+  totalCount: number;
+  exceedRate: number;
+  exceedDuration: number;  // 连续超标的记录数（代表持续时长）
+  exceedMax: number;
+  latestValue: number;
+  latestTime: string;
+}
 
 const DataAnalysisPage = () => {
   const { isGuest } = useAuth();
@@ -42,7 +57,13 @@ const DataAnalysisPage = () => {
   const [startDate, setStartDate] = useState<Dayjs | null>(dayjs().subtract(7, 'day'));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
 
+  // 阈值设置（按类型，排除设备类型）
+  const [thresholds, setThresholds] = useState<Record<string, number>>({});
+
   const pointTypes = useMemo(() => Array.from(new Set(points.map((p) => p.type))), [points]);
+
+  // 排除设备类型（Device），只对数值传感器设置阈值
+  const numericTypes = useMemo(() => pointTypes.filter((t) => t !== 'Device'), [pointTypes]);
 
   // 按类型分组
   const typeGroups = useMemo(() => {
@@ -61,7 +82,6 @@ const DataAnalysisPage = () => {
         const data = await getPoints();
         const pts = data.points || [];
         setPoints(pts);
-        // 默认选中全部类型
         const types = Array.from(new Set(pts.map((p) => p.type)));
         setSelectedTypes(types);
       } catch (e) {
@@ -141,6 +161,15 @@ const DataAnalysisPage = () => {
     );
   };
 
+  // 阈值变更
+  const handleThresholdChange = (type: string, value: string) => {
+    const num = parseFloat(value);
+    setThresholds((prev) => ({
+      ...prev,
+      [type]: isNaN(num) ? (prev[type] ?? 0) : num,
+    }));
+  };
+
   // 按类型分组统计
   const typeStats = useMemo(() => {
     const map: Record<string, VarStat[]> = {};
@@ -187,6 +216,91 @@ const DataAnalysisPage = () => {
     return points.filter((p) => selectedTypes.includes(p.type)).length;
   }, [points, selectedTypes]);
 
+  // ==================== 超标统计 ====================
+
+  const exceedStats = useMemo((): ExceedStat[] => {
+    // 按 point_id 分组，保留时间顺序
+    const pointItems: Record<string, SparkHistoryItem[]> = {};
+    history.forEach((item) => {
+      if (!pointItems[item.point_id]) pointItems[item.point_id] = [];
+      pointItems[item.point_id].push(item);
+    });
+
+    const result: ExceedStat[] = [];
+
+    points
+      .filter((p) => selectedTypes.includes(p.type) && p.type !== 'Device' && !isBoolPoint(p.point_id))
+      .forEach((p) => {
+        const threshold = thresholds[p.type];
+        const items = (pointItems[p.point_id] || [])
+          .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+        const totalCount = items.length;
+
+        if (totalCount === 0 || threshold === undefined || threshold === null) {
+          result.push({
+            variable: p.point_name || p.point_id,
+            type: p.type,
+            unit: p.unit,
+            threshold: threshold ?? 0,
+            exceedCount: 0,
+            totalCount,
+            exceedRate: 0,
+            exceedDuration: 0,
+            exceedMax: 0,
+            latestValue: 0,
+            latestTime: '',
+          });
+          return;
+        }
+
+        let exceedCount = 0;
+        let exceedMax = -Infinity;
+        let maxConsecutive = 0;
+        let currentConsecutive = 0;
+
+        items.forEach((item) => {
+          const val = parseFloat(item.value || '');
+          if (isNaN(val)) return;
+          if (val > threshold) {
+            exceedCount++;
+            exceedMax = Math.max(exceedMax, val);
+            currentConsecutive++;
+            maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+          } else {
+            currentConsecutive = 0;
+          }
+        });
+
+        const lastItem = items[items.length - 1];
+        const latestVal = parseFloat(lastItem?.value || '0');
+
+        result.push({
+          variable: p.point_name || p.point_id,
+          type: p.type,
+          unit: p.unit,
+          threshold,
+          exceedCount,
+          totalCount,
+          exceedRate: totalCount > 0 ? parseFloat(((exceedCount / totalCount) * 100).toFixed(1)) : 0,
+          exceedDuration: maxConsecutive,
+          exceedMax: exceedCount > 0 ? parseFloat(exceedMax.toFixed(2)) : 0,
+          latestValue: isNaN(latestVal) ? 0 : parseFloat(latestVal.toFixed(2)),
+          latestTime: lastItem?.created_at || '',
+        });
+      });
+
+    return result;
+  }, [history, points, selectedTypes, thresholds]);
+
+  const exceedTypeGroups = useMemo(() => {
+    const map: Record<string, ExceedStat[]> = {};
+    exceedStats.forEach((s) => {
+      if (!map[s.type]) map[s.type] = [];
+      map[s.type].push(s);
+    });
+    return map;
+  }, [exceedStats]);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Stack spacing={3}>
@@ -230,6 +344,35 @@ const DataAnalysisPage = () => {
                   />
                 );
               })}
+            </Stack>
+
+            {/* 阈值设置（仅对数值类型） */}
+            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Typography variant="body2" fontWeight={600} sx={{ mr: 0.5 }}>超标阈值：</Typography>
+              {numericTypes.filter((t) => selectedTypes.includes(t)).map((type) => {
+                const unit = getUnit(type);
+                const val = thresholds[type];
+                return (
+                  <TextField
+                    key={type}
+                    size="small"
+                    type="number"
+                    label={`${typeNameMap[type] || type}${unit ? ` (${unit})` : ''}`}
+                    value={val !== undefined ? val : ''}
+                    onChange={(e) => handleThresholdChange(type, e.target.value)}
+                    placeholder="阈值"
+                    inputProps={{ min: 0, step: 0.1, style: { fontSize: '0.8rem' } }}
+                    sx={{
+                      width: 140,
+                      '& .MuiOutlinedInput-root': { borderRadius: 1.5 },
+                      '& .MuiInputLabel-root': { fontSize: '0.75rem' },
+                    }}
+                  />
+                );
+              })}
+              {numericTypes.filter((t) => selectedTypes.includes(t)).length === 0 && (
+                <Typography variant="caption" color="text.secondary">请先选择数值类型的测点</Typography>
+              )}
             </Stack>
 
             {/* 时间范围 + 刷新 */}
@@ -278,6 +421,7 @@ const DataAnalysisPage = () => {
                 sx={{ '& .MuiTab-root': { minHeight: 52, fontWeight: 600, fontSize: '0.85rem', textTransform: 'none' }, '& .Mui-selected': { color: `${ACCENT} !important`, fontWeight: 700 } }}>
                 <Tab icon={<BarChartIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="描述性统计" />
                 <Tab icon={<ScatterPlotIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="相关性分析" />
+                <Tab icon={<WarningAmberIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="超标统计" />
               </Tabs>
             </Box>
 
@@ -401,6 +545,129 @@ const DataAnalysisPage = () => {
                     <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
                       需要至少 3 个测点类型才能计算相关性矩阵
                     </Typography>
+                  )}
+                </Stack>
+              </TabPanel>
+
+              {/* Tab 2: 超标统计 */}
+              <TabPanel value={tabValue} index={2}>
+                <Stack spacing={3}>
+                  <Typography variant="subtitle2" fontWeight={700}>超标统计</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    基于上方设置的阈值，统计各测点超过阈值的次数、比例、持续时长和最大值
+                    （{startDate?.format('YYYY-MM-DD')} ~ {endDate?.format('YYYY-MM-DD')}）
+                  </Typography>
+
+                  {Object.keys(thresholds).length === 0 ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}>
+                      <WarningAmberIcon sx={{ fontSize: 48, color: '#F57C00', mb: 1 }} />
+                      <Typography color="text.secondary">请先在筛选栏中设置超标阈值</Typography>
+                      <Typography variant="caption" color="text.secondary">为需要监控的传感器类型输入阈值后，刷新分析即可查看超标统计</Typography>
+                    </Box>
+                  ) : Object.entries(exceedTypeGroups).length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
+                      当前时间范围内无数据，请调整筛选条件
+                    </Typography>
+                  ) : (
+                    Object.entries(exceedTypeGroups).map(([type, items]) => (
+                      <Paper key={type} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+                        <Box sx={{ px: 2, py: 1.5, backgroundColor: ACCENT_LIGHT, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="subtitle2" fontWeight={700}>
+                            {typeNameMap[type] || type}
+                          </Typography>
+                          <Chip
+                            label={`阈值 > ${thresholds[type]} ${getUnit(type)}`}
+                            size="small"
+                            sx={{ backgroundColor: '#FFF3E0', color: '#E65100', fontWeight: 600, fontSize: '0.7rem' }}
+                          />
+                          {(() => {
+                            const totalExceed = items.reduce((s, i) => s + i.exceedCount, 0);
+                            return totalExceed > 0 ? (
+                              <Chip
+                                label={`共 ${totalExceed} 次超标`}
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                sx={{ fontWeight: 600, fontSize: '0.7rem', height: 22 }}
+                              />
+                            ) : (
+                              <Chip
+                                label="全部正常"
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                                sx={{ fontWeight: 600, fontSize: '0.7rem', height: 22 }}
+                              />
+                            );
+                          })()}
+                        </Box>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ '& th': { fontWeight: 700, fontSize: '0.78rem' } }}>
+                                <TableCell>测点名称</TableCell>
+                                <TableCell align="right">超标次数</TableCell>
+                                <TableCell align="right">超标率</TableCell>
+                                <TableCell align="right">最长连续</TableCell>
+                                <TableCell align="right">超标最大值</TableCell>
+                                <TableCell align="right">最新值</TableCell>
+                                <TableCell align="right">最新时间</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {items.map((item) => {
+                                const hasExceed = item.exceedCount > 0;
+                                return (
+                                  <TableRow
+                                    key={item.variable}
+                                    sx={{
+                                      '&:hover': { backgroundColor: ACCENT_LIGHT },
+                                      backgroundColor: hasExceed ? 'rgba(229,57,53,0.04)' : 'transparent',
+                                    }}
+                                  >
+                                    <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem' }}>{item.variable}</TableCell>
+                                    <TableCell align="right">
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={hasExceed ? 700 : 400}
+                                        color={hasExceed ? 'error.main' : 'text.primary'}
+                                      >
+                                        {item.exceedCount}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={item.exceedRate >= 10 ? 700 : 400}
+                                        color={item.exceedRate >= 30 ? 'error.main' : item.exceedRate >= 10 ? '#F57C00' : 'text.primary'}
+                                      >
+                                        {item.exceedRate}%
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="right">{item.exceedDuration > 0 ? `${item.exceedDuration} 次` : '—'}</TableCell>
+                                    <TableCell align="right">
+                                      {item.exceedCount > 0 ? `${item.exceedMax} ${item.unit}` : '—'}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={600}
+                                        color={item.latestValue > item.threshold ? 'error.main' : 'text.primary'}
+                                      >
+                                        {item.latestValue} {item.unit}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell align="right" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                      {item.latestTime ? dayjs(item.latestTime).format('MM-DD HH:mm') : '—'}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Paper>
+                    ))
                   )}
                 </Stack>
               </TabPanel>

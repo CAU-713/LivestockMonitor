@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -19,13 +19,72 @@ interface LineChartProps {
 }
 
 const LineChart: React.FC<LineChartProps> = ({ chartData }) => {
-  // The title is now handled by the parent dashboard page
   const { unit, lines, data, yAxes } = chartData;
+
+  // 每条线的可见性状态
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
+
+  // 当 lines 变化时，重置隐藏状态（新图表加载时全部显示）
+  useEffect(() => {
+    setHiddenKeys(new Set());
+  }, [lines.length, data.length, chartData.title]);
+
+  const handleLegendClick = (e: any) => {
+    // e.dataKey 来自 Recharts 内部事件对象
+    const key = e?.dataKey;
+    if (!key) return;
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderLegend = (props: any) => {
+    const { payload } = props;
+    if (!payload || payload.length === 0) return null;
+    return (
+      <ul style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', listStyle: 'none', padding: 0, margin: '4px 0 0' }}>
+        {payload.map((entry: any) => {
+          const isHidden = hiddenKeys.has(entry.dataKey);
+          return (
+            <li
+              key={entry.value}
+              onClick={() => handleLegendClick({ dataKey: entry.dataKey })}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                marginRight: 14,
+                cursor: 'pointer',
+                userSelect: 'none',
+                opacity: isHidden ? 0.4 : 1,
+                textDecoration: isHidden ? 'line-through' : 'none',
+                transition: 'opacity 0.15s',
+              }}
+              title={isHidden ? '点击恢复显示' : '点击隐藏'}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  backgroundColor: entry.color,
+                  marginRight: 6,
+                }}
+              />
+              <span style={{ fontSize: '0.8rem', color: '#333' }}>{entry.value}</span>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
 
   const hasRange = lines.some((line) => line.dataKey === 'range');
 
   return (
-    // The Paper and Title are now handled by the parent dashboard page
     <Box sx={{ height: 320 }}>
       <ResponsiveContainer width='100%' height='100%'>
         <RechartsLineChart
@@ -68,7 +127,7 @@ const LineChart: React.FC<LineChartProps> = ({ chartData }) => {
               return [`${value ?? ''} ${suffix}`, name ?? ''];
             }}
           />
-          <Legend />
+          <Legend content={renderLegend} />
 
           {hasRange && (
             <Area
@@ -95,6 +154,9 @@ const LineChart: React.FC<LineChartProps> = ({ chartData }) => {
                 strokeWidth={2}
                 activeDot={{ r: 8 }}
                 dot={false}
+                hide={hiddenKeys.has(line.dataKey)}
+                // 让图例默认行为不阻止我们的 click
+                connectNulls
               />
             ))}
         </RechartsLineChart>
