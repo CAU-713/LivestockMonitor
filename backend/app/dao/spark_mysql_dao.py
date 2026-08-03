@@ -111,7 +111,7 @@ def get_point_history(
     if granularity == "hour":
         sql = f"""
             SELECT pointId, pointName,
-                   DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00') AS record_time,
+                   DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:00:00') AS record_time,
                    ROUND(AVG(CAST(value AS DECIMAL(12,4))), 2) AS avg_value,
                    MIN(CAST(value AS DECIMAL(12,4))) AS min_value,
                    MAX(CAST(value AS DECIMAL(12,4))) AS max_value,
@@ -119,7 +119,7 @@ def get_point_history(
             FROM device_data_save
             WHERE pointId IN ({placeholders})
         """
-        group_clause = "GROUP BY pointId, pointName, DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')"
+        group_clause = "GROUP BY pointId, pointName, DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:00:00')"
         order_clause = "ORDER BY record_time ASC, pointId ASC"
         limit_clause = f"LIMIT {limit}"
 
