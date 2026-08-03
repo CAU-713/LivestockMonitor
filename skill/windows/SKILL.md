@@ -43,6 +43,20 @@ ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ubuntu@120.53.24.48 "timeout 30 <命�
 
 ## 部署流程（代码变更后）
 
+### 部署前必做：准备 WSL 的 SSH 密钥（关键！）
+
+> **为什么需要这一步**：WSL 中访问 Windows 挂载盘（`/mnt/c/...`）的文件时权限始终为 777，
+> SSH 会拒绝使用权限过宽的密钥文件（要求 600）。直接引用 `/mnt/c/Users/admin/.ssh/id_rsa`
+> 会导致 rsync 报 `Permissions too open` / `Permission denied`。
+> **解决**：把密钥复制到 WSL 原生文件系统并设置 600 权限。
+
+```bash
+# 一次性准备（密钥已存在则自动跳过复制，重新设 600 权限）
+wsl bash -c "mkdir -p ~/.ssh && cp -f /mnt/c/Users/admin/.ssh/id_rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa"
+```
+
+> 之后所有 WSL rsync 命令统一使用 WSL 内路径 `-i ~/.ssh/id_rsa`（不要再用 `/mnt/c/...` 路径）。
+
 ### 快速部署前端（仅改了前端代码）
 
 ```bash
@@ -50,12 +64,15 @@ ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ubuntu@120.53.24.48 "timeout 30 <命�
 cd c:\laboratory\LivestockMonitor
 git add . && git commit -m "feat: xxx" && git push
 
-# 2. wsl rsync 上传前端源码（排除 node_modules/.next）
+# 2. 准备 WSL 密钥（见上文，密钥已复制过可跳过）
+wsl bash -c "mkdir -p ~/.ssh && cp -f /mnt/c/Users/admin/.ssh/id_rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa"
+
+# 3. wsl rsync 上传前端源码（排除 node_modules/.next）
 wsl rsync -avz --delete --exclude='node_modules' --exclude='.next' \
-  -e "ssh -i /mnt/c/Users/admin/.ssh/id_rsa -o ConnectTimeout=10" \
+  -e "ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10" \
   /mnt/c/laboratory/LivestockMonitor/frontend/ ubuntu@120.53.24.48:/root/LivestockMonitor/frontend/
 
-# 3. 构建并重启前端
+# 4. 构建并重启前端
 ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ubuntu@120.53.24.48 \
   "timeout 300 bash -c 'cd /root/LivestockMonitor && sudo docker compose build frontend 2>&1 | tail -10'"
 
@@ -68,12 +85,15 @@ ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ubuntu@120.53.24.48 \
 > **重要**：后端镜像含 torch+CUDA 约 8.65GB，首次构建需 5-8 分钟，timeout 必须 **600+**。
 
 ```bash
-# 1. wsl rsync 上传后端源码（排除 __pycache__/.venv）
+# 1. 准备 WSL 密钥（见上文，密钥已复制过可跳过）
+wsl bash -c "mkdir -p ~/.ssh && cp -f /mnt/c/Users/admin/.ssh/id_rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa"
+
+# 2. wsl rsync 上传后端源码（排除 __pycache__/.venv）
 wsl rsync -avz --delete --exclude='__pycache__' --exclude='.venv' \
-  -e "ssh -i /mnt/c/Users/admin/.ssh/id_rsa -o ConnectTimeout=10" \
+  -e "ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10" \
   /mnt/c/laboratory/LivestockMonitor/backend/ ubuntu@120.53.24.48:/root/LivestockMonitor/backend/
 
-# 2. 构建并重启后端（timeout 600）
+# 3. 构建并重启后端（timeout 600）
 ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ubuntu@120.53.24.48 \
   "timeout 600 bash -c 'cd /root/LivestockMonitor && sudo docker compose build backend 2>&1 | tail -10'"
 

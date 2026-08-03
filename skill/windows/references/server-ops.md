@@ -85,8 +85,9 @@ ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 -t ubuntu@120.53.24.48 \
 
 1. **磁盘不足**：后端构建报 `No space left on device` → 先 `sudo docker system prune -af` 清理（可回收 16GB+），确认可用空间 > 10GB 再 build
 2. **权限问题**：scp/rsync 报 `Permission denied` → `sudo chown -R ubuntu:ubuntu /root/LivestockMonitor`
-3. **构建超时**：后端镜像含 torch+CUDA 约 8.65GB，首次构建需 5-8 分钟，timeout 必须设 **600+** 秒
-4. **rsync vs scp**：scp 会全量上传 `node_modules`(数百MB) 和 `.next`，用 rsync 排除这些目录效率更高
+3. **WSL 密钥权限**：WSL rsync 报 `Permissions too open` / `Permission denied (publickey)` → 是密钥权限问题，不是服务器权限问题。WSL 中不能直接用 `/mnt/c/Users/admin/.ssh/id_rsa`（挂载盘权限恒为 777），必须先 `wsl bash -c "mkdir -p ~/.ssh && cp -f /mnt/c/Users/admin/.ssh/id_rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa"`，再改用 `-i ~/.ssh/id_rsa`
+4. **构建超时**：后端镜像含 torch+CUDA 约 8.65GB，首次构建需 5-8 分钟，timeout 必须设 **600+** 秒
+5. **rsync vs scp**：scp 会全量上传 `node_modules`(数百MB) 和 `.next`，用 rsync 排除这些目录效率更高
 
 ---
 
@@ -172,8 +173,9 @@ import { Grid } from '@mui/material';
        ├─ 构建超时（timeout 120 不够）→ 后端需 timeout 600+
        │    └─ 后端含 torch+CUDA，首次构建需 5-8 分钟
        │
-       └─ scp "Permission denied" → 目录权限问题
-            └─ sudo chown -R ubuntu:ubuntu /root/LivestockMonitor
+       └─ rsync 报 "Permission denied (publickey)" / "Permissions too open" → WSL 密钥权限问题
+            └─ wsl bash -c "mkdir -p ~/.ssh && cp -f /mnt/c/Users/admin/.ssh/id_rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa"
+            └─ 并用 -i ~/.ssh/id_rsa 重试（非 WSL 环境的 Permission denied 才是目录权限 → sudo chown -R ubuntu:ubuntu /root/LivestockMonitor）
 ```
 
 ---

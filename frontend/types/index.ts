@@ -157,20 +157,6 @@ export interface User {
   createdAt: string;
 }
 
-/**
- * @description Represents an alert rule
- */
-export interface AlertRule {
-  id: string;
-  name: string;
-  sensorName: string;
-  ruleType: 'manual' | 'smart'; // manual: 手动规则, smart: 智能规则
-  condition: 'gt' | 'lt' | 'eq'; // greater than, less than, equal
-  threshold: number;
-  notificationMethod: 'email' | 'sms' | 'both';
-  enabled: boolean;
-}
-
 // =================================================================
 // Types for Alert Center
 // =================================================================

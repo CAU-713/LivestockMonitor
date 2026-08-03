@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import { Container, Box, Tabs, Tab, Paper, Typography } from '@mui/material';
 import UserManagement from '@/app/(main)/settings/components/UserManagement';
-import DeviceManagement from '@/app/(main)/settings/components/DeviceManagement';
-import AlertRuleManagement from '@/app/(main)/settings/components/AlertRuleManagement';
 import AuditLogManagement from '@/app/(main)/settings/components/AuditLogManagement';
-import BatchImportManagement from '@/app/(main)/settings/components/BatchImportManagement';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface TabPanelProps {
@@ -67,26 +64,11 @@ export default function SettingsPage() {
             id='settings-tab-0'
             aria-controls='settings-tabpanel-0'
           />
-          <Tab
-            label='设备管理'
-            id='settings-tab-1'
-            aria-controls='settings-tabpanel-1'
-          />
-          <Tab
-            label='警告规则'
-            id='settings-tab-2'
-            aria-controls='settings-tabpanel-2'
-          />
-          <Tab
-            label='批量导入'
-            id='settings-tab-3'
-            aria-controls='settings-tabpanel-3'
-          />
           {isAdmin && (
             <Tab
               label='操作日志'
-              id='settings-tab-4'
-              aria-controls='settings-tabpanel-4'
+              id='settings-tab-1'
+              aria-controls='settings-tabpanel-1'
             />
           )}
         </Tabs>
@@ -96,20 +78,8 @@ export default function SettingsPage() {
             <UserManagement />
           </TabPanel>
 
-          <TabPanel value={tabValue} index={1}>
-            <DeviceManagement />
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={2}>
-            <AlertRuleManagement />
-          </TabPanel>
-
-          <TabPanel value={tabValue} index={3}>
-            <BatchImportManagement />
-          </TabPanel>
-
           {isAdmin && (
-            <TabPanel value={tabValue} index={4}>
+            <TabPanel value={tabValue} index={1}>
               <AuditLogManagement />
             </TabPanel>
           )}

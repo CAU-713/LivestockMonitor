@@ -1,13 +1,11 @@
 import {
   Shed,
-  Pen,
   Sensor,
   Camera,
   BehaviorSummary,
   MergedChartData,
   SensorRecord,
   User,
-  AlertRule,
   StatisticsSummaryData,
   CorrelationMatrix,
 } from '@/types';
@@ -54,16 +52,7 @@ export const mockComfortAssessments: Record<string, ComfortAssessment> = {
 };
 
 // =================================================================
-// 2. Pen List (圈列表)
-// =================================================================
-export const mockPens: Pen[] = [
-  { id: 'pen-a1', name: 'A区-1号圈', shedId: 'shed-a' },
-  { id: 'pen-a2', name: 'A区-2号圈', shedId: 'shed-a' },
-  { id: 'pen-b1', name: 'B区-母羊圈', shedId: 'shed-b' },
-];
-
-// =================================================================
-// 3. Sensor List (传感器列表)
+// 2. Sensor List (传感器列表)
 // =================================================================
 export const mockSensors: Sensor[] = [
   {
@@ -749,153 +738,6 @@ export const mockUsers: User[] = [
     status: 'active',
     createdAt: '2024-06-01',
   },
-];
-
-// ============ Alert Rules Mock Data ============
-export const mockAlertRules: AlertRule[] = [
-  {
-    id: '1',
-    name: '温度过高',
-    sensorName: '东侧温度计',
-    ruleType: 'manual',
-    condition: 'gt',
-    threshold: 28,
-    notificationMethod: 'email',
-    enabled: true,
-  },
-  {
-    id: '2',
-    name: '温度过低',
-    sensorName: '西侧温度计',
-    ruleType: 'manual',
-    condition: 'lt',
-    threshold: 15,
-    notificationMethod: 'both',
-    enabled: true,
-  },
-  {
-    id: '3',
-    name: '湿度过高',
-    sensorName: '中央湿度计',
-    ruleType: 'manual',
-    condition: 'gt',
-    threshold: 75,
-    notificationMethod: 'sms',
-    enabled: true,
-  },
-  {
-    id: '4',
-    name: '湿度过低',
-    sensorName: '南侧湿度计',
-    ruleType: 'manual',
-    condition: 'lt',
-    threshold: 40,
-    notificationMethod: 'email',
-    enabled: false,
-  },
-  {
-    id: '5',
-    name: '氨气浓度过高',
-    sensorName: '氨气传感器',
-    ruleType: 'manual',
-    condition: 'gt',
-    threshold: 25,
-    notificationMethod: 'both',
-    enabled: true,
-  },
-  {
-    id: '6',
-    name: '二氧化碳浓度过高',
-    sensorName: 'CO2传感器',
-    ruleType: 'manual',
-    condition: 'gt',
-    threshold: 1500,
-    notificationMethod: 'email',
-    enabled: true,
-  },
-  {
-    id: '7',
-    name: '通用设备异常',
-    sensorName: '所有设备',
-    ruleType: 'manual',
-    condition: 'eq',
-    threshold: 0,
-    notificationMethod: 'both',
-    enabled: true,
-  },
-  {
-    id: '8',
-    name: '光照强度异常',
-    sensorName: '光照传感器',
-    ruleType: 'manual',
-    condition: 'lt',
-    threshold: 100,
-    notificationMethod: 'email',
-    enabled: false,
-  },
-  // 智能规则假数据
-  {
-    id: '9',
-    name: '智能温度异常检测',
-    sensorName: '东侧温度计',
-    ruleType: 'smart',
-    condition: 'gt',
-    threshold: 0,
-    notificationMethod: 'both',
-    enabled: true,
-  },
-  {
-    id: '10',
-    name: '湿度自适应预警',
-    sensorName: '中央湿度计',
-    ruleType: 'smart',
-    condition: 'lt',
-    threshold: 0,
-    notificationMethod: 'email',
-    enabled: true,
-  },
-  {
-    id: '11',
-    name: '气体浓度智能监测',
-    sensorName: '氨气传感器',
-    ruleType: 'smart',
-    condition: 'gt',
-    threshold: 0,
-    notificationMethod: 'sms',
-    enabled: false,
-  },
-];
-
-// ============ Alert Rules Constants ============
-export const SENSOR_NAMES = [
-  '东侧温度计',
-  '西侧温度计',
-  '中央湿度计',
-  '南侧湿度计',
-  '氨气传感器',
-  'CO2传感器',
-  '光照传感器',
-  '所有设备',
-];
-
-// 智能规则描述信息
-export const SMART_RULE_DESCRIPTIONS: { [key: string]: string } = {
-  temperature: '基于历史温度数据的智能分析，动态调整告警阈值',
-  humidity: '湿度模式的机器学习检测，自适应季节和天气变化',
-  gas: '多点传感器数据融合分析，智能识别异常气体浓度',
-  general: '多维度数据关联分析，综合评估环境健康状况',
-};
-
-export const CONDITIONS = [
-  { value: 'gt', label: '大于 (>)' },
-  { value: 'lt', label: '小于 (<)' },
-  { value: 'eq', label: '等于 (=)' },
-];
-
-export const NOTIFICATION_METHODS = [
-  { value: 'email', label: '邮件' },
-  { value: 'sms', label: '短信' },
-  { value: 'both', label: '邮件和短信' },
 ];
 
 // =================================================================

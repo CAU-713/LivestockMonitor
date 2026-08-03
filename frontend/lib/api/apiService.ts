@@ -5,15 +5,13 @@
 
 import {
   mockSheds,
-  mockSensors,
   mockCameras,
   mockUsers,
-  mockAlertRules,
   mockHourlyChartData,
   mockDailyChartData,
   mockSensorRecords,
 } from '@/constants/mockData';
-import type { Shed, Sensor, Camera, User, AlertRule, MergedChartData, Alert, AlertStats, AnimalRecord, AnimalStats } from '@/types';
+import type { Shed, Camera, User, MergedChartData, Alert, AlertStats, AnimalRecord, AnimalStats } from '@/types';
 
 // ============================================================
 // 通用请求工具
@@ -64,17 +62,6 @@ interface ShedDTO {
   description?: string;
 }
 
-interface SensorDTO {
-  id: number;
-  name: string;
-  shed_id: number;
-  pen_id?: number;
-  type: string;
-  status: string;
-  last_reading?: number;
-  location?: string;
-}
-
 interface CameraDTO {
   id: number;
   name: string;
@@ -92,18 +79,6 @@ interface UserDTO {
   role: number;
 }
 
-interface AlertRuleDTO {
-  id: string;
-  name: string;
-  sensor_name: string;
-  rule_type: string;
-  condition: string;
-  threshold: number;
-  notification_method: string;
-  enabled: boolean;
-  description?: string;
-}
-
 function mapShed(dto: ShedDTO): Shed {
   return {
     id: String(dto.id),
@@ -111,18 +86,6 @@ function mapShed(dto: ShedDTO): Shed {
     location: dto.location,
     livestockCount: dto.livestock_count,
     area: dto.area,
-  };
-}
-
-function mapSensor(dto: SensorDTO): Sensor {
-  return {
-    id: String(dto.id),
-    name: dto.name,
-    shedId: String(dto.shed_id),
-    penId: dto.pen_id ? String(dto.pen_id) : '',
-    type: dto.type as Sensor['type'],
-    status: dto.status as Sensor['status'],
-    lastReading: dto.last_reading,
   };
 }
 
@@ -151,19 +114,6 @@ function mapUser(dto: UserDTO): User {
     role: roleMap[dto.role] ?? 'visitor',
     status: 'active',
     createdAt: '',
-  };
-}
-
-function mapAlertRule(dto: AlertRuleDTO): AlertRule {
-  return {
-    id: dto.id,
-    name: dto.name,
-    sensorName: dto.sensor_name,
-    ruleType: dto.rule_type as AlertRule['ruleType'],
-    condition: dto.condition as AlertRule['condition'],
-    threshold: dto.threshold,
-    notificationMethod: dto.notification_method as AlertRule['notificationMethod'],
-    enabled: dto.enabled,
   };
 }
 
@@ -203,49 +153,6 @@ export const shedApi = {
 
   async deleteShed(id: number): Promise<void> {
     await apiFetch<ResponseDTO<null>>(`/api/sheds/${id}`, { method: 'DELETE' });
-  },
-};
-
-// ============================================================
-// 传感器 API
-// ============================================================
-
-export const sensorApi = {
-  async getSensors(params?: { shed_id?: number; page_size?: number }): Promise<Sensor[]> {
-    try {
-      const query = new URLSearchParams();
-      if (params?.shed_id) query.set('shed_id', String(params.shed_id));
-      query.set('page_size', String(params?.page_size ?? 200));
-
-      const res = await apiFetch<ResponseDTO<ListResponseData<SensorDTO>>>(`/api/sensors?${query}`);
-      if (res.success && res.data?.items) {
-        return res.data.items.map(mapSensor);
-      }
-      return mockSensors;
-    } catch (e) {
-      console.warn('[sensorApi.getSensors] fallback to mock', e);
-      return mockSensors;
-    }
-  },
-
-  async createSensor(data: Omit<SensorDTO, 'id'>): Promise<SensorDTO> {
-    const res = await apiFetch<ResponseDTO<SensorDTO>>('/api/sensors', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return res.data;
-  },
-
-  async updateSensor(id: number, data: Partial<SensorDTO>): Promise<SensorDTO> {
-    const res = await apiFetch<ResponseDTO<SensorDTO>>(`/api/sensors/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return res.data;
-  },
-
-  async deleteSensor(id: number): Promise<void> {
-    await apiFetch<ResponseDTO<null>>(`/api/sensors/${id}`, { method: 'DELETE' });
   },
 };
 
@@ -386,52 +293,6 @@ export const historyApi = {
       console.warn('[historyApi.getSensorHistory] API failed', e);
       return [];
     }
-  },
-};
-
-// ============================================================
-// 告警规则 API
-// ============================================================
-
-export const alertRuleApi = {
-  async getAlertRules(): Promise<AlertRule[]> {
-    try {
-      const res = await apiFetch<ResponseDTO<{ rules: AlertRuleDTO[] }>>('/api/alert-rules');
-      if (res.success && res.data?.rules) {
-        return res.data.rules.map(mapAlertRule);
-      }
-      return mockAlertRules;
-    } catch (e) {
-      console.warn('[alertRuleApi.getAlertRules] fallback to mock', e);
-      return mockAlertRules;
-    }
-  },
-
-  async createAlertRule(data: Omit<AlertRuleDTO, 'id'>): Promise<AlertRuleDTO> {
-    const res = await apiFetch<ResponseDTO<AlertRuleDTO>>('/api/alert-rules', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return res.data;
-  },
-
-  async updateAlertRule(id: string, data: Partial<AlertRuleDTO>): Promise<AlertRuleDTO> {
-    const res = await apiFetch<ResponseDTO<AlertRuleDTO>>(`/api/alert-rules/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return res.data;
-  },
-
-  async deleteAlertRule(id: string): Promise<void> {
-    await apiFetch<ResponseDTO<null>>(`/api/alert-rules/${id}`, { method: 'DELETE' });
-  },
-
-  async toggleAlertRule(id: string, enabled: boolean): Promise<void> {
-    await apiFetch<ResponseDTO<null>>(`/api/alert-rules/${id}/toggle`, {
-      method: 'PATCH',
-      body: JSON.stringify({ enabled }),
-    });
   },
 };
 
@@ -977,46 +838,4 @@ export const auditApi = {
   },
 };
 
-// ============================================================
-// 批量导入 API
-// ============================================================
 
-export interface ImportResult {
-  success_count: number;
-  fail_count: number;
-  errors: { row: number; reason: string }[];
-}
-
-export const importApi = {
-  async importAnimals(file: File): Promise<ImportResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await fetch('/api/import/animals', { method: 'POST', body: formData });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || err.message || `HTTP ${response.status}`);
-    }
-    const res = await response.json() as ResponseDTO<ImportResult>;
-    return res.data;
-  },
-
-  async importWeightRecords(file: File): Promise<ImportResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await fetch('/api/import/health/weight', { method: 'POST', body: formData });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.detail || err.message || `HTTP ${response.status}`);
-    }
-    const res = await response.json() as ResponseDTO<ImportResult>;
-    return res.data;
-  },
-
-  downloadAnimalTemplate() {
-    window.open('/api/import/template/animals', '_blank');
-  },
-
-  downloadWeightTemplate() {
-    window.open('/api/import/template/weight', '_blank');
-  },
-};
