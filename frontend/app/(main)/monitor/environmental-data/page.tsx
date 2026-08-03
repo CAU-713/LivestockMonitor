@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -16,28 +16,42 @@ import {
   Switch,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { getPoints, type SparkPoint } from '@/lib/api/sparksApi';
+import { usePolling } from '@/lib/hooks/usePolling';
 import { typeNameMap, typeColorMap, isBoolPoint } from '@/constants/sensorTypes';
+
+// 格式化时间为 HH:mm:ss
+const formatTime = (d: Date): string =>
+  `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
 
 const EnvironmentalDataPage = () => {
   const [loading, setLoading] = useState(true);
   const [points, setPoints] = useState<SparkPoint[]>([]);
   const [activeType, setActiveType] = useState<string>('all');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await getPoints();
-        setPoints(data.points || []);
-      } catch (e) {
-        console.error('Failed to load points:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+  // 加载测点数据（initial=true 时显示加载态，轮询时静默更新）
+  const load = useCallback(async (initial = false) => {
+    if (initial) setLoading(true);
+    try {
+      const data = await getPoints();
+      setPoints(data.points || []);
+      setLastUpdated(new Date());
+    } catch (e) {
+      console.error('Failed to load points:', e);
+    } finally {
+      if (initial) setLoading(false);
+    }
   }, []);
+
+  // 初始加载
+  useEffect(() => {
+    load(true);
+  }, [load]);
+
+  // 每 5 秒静默轮询：仅重新请求最新数值并局部渲染，不影响类型筛选等交互
+  usePolling(() => load(false), { interval: 5000 });
 
   const pointTypes = useMemo(() => {
     const types = new Set(points.map((p) => p.type));
@@ -55,6 +69,20 @@ const EnvironmentalDataPage = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="h5" fontWeight={700}>环境数据监控</Typography>
           {loading && <CircularProgress size={18} sx={{ color: '#2E7D32' }} />}
+          <Box sx={{ flex: 1 }} />
+          {lastUpdated && (
+            <Chip
+              icon={<AutorenewIcon sx={{ fontSize: 14 }} />}
+              label={`每 5 秒自动刷新 · 上次 ${formatTime(lastUpdated)}`}
+              size="small"
+              variant="outlined"
+              sx={{
+                color: 'text.secondary',
+                borderColor: 'rgba(46,125,50,0.35)',
+                backgroundColor: 'rgba(46,125,50,0.04)',
+              }}
+            />
+          )}
         </Box>
         <Typography variant="body2" color="text.secondary">实时查看所有测点数据，点击类型标签快速筛选</Typography>
       </Box>

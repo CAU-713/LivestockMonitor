@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Grid from '@mui/material/GridLegacy';
 import {
   Paper,
@@ -33,6 +33,7 @@ import {
   type SparkDeviceStatus,
   type SparkOverview,
 } from '@/lib/api/sparksApi';
+import { usePolling } from '@/lib/hooks/usePolling';
 import type { MergedChartData } from '@/types';
 
 type KPIStatus = 'normal' | 'warning' | 'danger';
@@ -67,6 +68,10 @@ const chartTypeConfig: Record<string, { label: string; color: string; unit: stri
   WindSpeed: { label: '风速趋势', color: '#2E7D32', unit: 'm/s' },
 };
 
+// 格式化时间为 HH:mm:ss
+const formatTime = (d: Date): string =>
+  `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+
 const DashboardPage = () => {
   // 状态
   const [loading, setLoading] = useState(true);
@@ -76,34 +81,51 @@ const DashboardPage = () => {
   const [chartData, setChartData] = useState<MergedChartData | null>(null);
   const [selectedChartType, setSelectedChartType] = useState('Temperature');
   const [chartLoading, setChartLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  // 供趋势图读取的最新测点（避免轮询更新 points 状态时触发图表重载）
+  const pointsRef = useRef<SparkPoint[]>([]);
+  // 数据版本：仅在首次（或失败后恢复）拿到测点数据时递增，用于触发一次图表加载
+  const [dataVersion, setDataVersion] = useState(0);
 
-  // 加载基础数据
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [pointsRes, overviewRes, deviceRes] = await Promise.all([
-          getPoints(),
-          getOverview(),
-          getDeviceStatus(),
-        ]);
-        setPoints(pointsRes.points || []);
-        setOverview(overviewRes);
-        setDeviceStatus(deviceRes);
-      } catch (e) {
-        console.error('Dashboard load failed:', e);
-      } finally {
-        setLoading(false);
+  // 加载基础数据（initial=true 时显示加载态，轮询时静默更新）
+  const loadData = useCallback(async (initial = false) => {
+    if (initial) setLoading(true);
+    try {
+      const [pointsRes, overviewRes, deviceRes] = await Promise.all([
+        getPoints(),
+        getOverview(),
+        getDeviceStatus(),
+      ]);
+      const hasPointsBefore = pointsRef.current.length > 0;
+      pointsRef.current = pointsRes.points || [];
+      setPoints(pointsRef.current);
+      setOverview(overviewRes);
+      setDeviceStatus(deviceRes);
+      setLastUpdated(new Date());
+      // 首次成功（或失败后恢复）拿到测点时，触发一次图表加载
+      if (!hasPointsBefore && pointsRef.current.length > 0) {
+        setDataVersion((v) => v + 1);
       }
-    };
-    loadData();
+    } catch (e) {
+      console.error('Dashboard load failed:', e);
+    } finally {
+      if (initial) setLoading(false);
+    }
   }, []);
 
-  // 加载趋势图数据
-  const loadChartData = useCallback(async (sensorType: string) => {
-    setChartLoading(true);
+  // 初始加载
+  useEffect(() => {
+    loadData(true);
+  }, [loadData]);
+
+  // 每 5 秒静默轮询：仅重新请求最新数值并局部渲染，不影响图表与其他交互
+  usePolling(() => loadData(false), { interval: 5000 });
+
+  // 加载趋势图数据（从 ref 读取最新测点；silent=true 时静默刷新，不显示加载态）
+  const loadChartData = useCallback(async (sensorType: string, silent = false) => {
+    if (!silent) setChartLoading(true);
     try {
-      const typePoints = points.filter((p) => p.type === sensorType);
+      const typePoints = pointsRef.current.filter((p) => p.type === sensorType);
       if (typePoints.length === 0) {
         setChartData(null);
         return;
@@ -156,16 +178,21 @@ const DashboardPage = () => {
       console.error('Chart data load failed:', e);
       setChartData(null);
     } finally {
-      setChartLoading(false);
+      if (!silent) setChartLoading(false);
     }
-  }, [points]);
+  }, []);
 
-  // 初始加载 + 类型切换
+  // 首次拿到测点数据后加载图表；仅用户切换类型时重新加载（不随测点轮询触发）
   useEffect(() => {
-    if (points.length > 0) {
-      loadChartData(selectedChartType);
-    }
-  }, [points, selectedChartType, loadChartData]);
+    if (dataVersion === 0) return;
+    loadChartData(selectedChartType);
+  }, [selectedChartType, loadChartData, dataVersion]);
+
+  // 每 10 分钟静默刷新一次趋势图数据（不显示加载态，不影响其他交互）
+  usePolling(() => {
+    if (pointsRef.current.length === 0 || chartLoading) return;
+    loadChartData(selectedChartType, true);
+  }, { interval: 10 * 60 * 1000 });
 
   // ==================== 按类型分组测点 ====================
 
@@ -325,6 +352,11 @@ const DashboardPage = () => {
         <Typography variant="h6" fontWeight={700} mb={2}>
           测点概览
           <Chip label={`共 ${points.length} 个测点`} size="small" sx={{ ml: 1.5, backgroundColor: 'rgba(46,125,50,0.1)', color: '#2E7D32', fontWeight: 600 }} />
+          {lastUpdated && (
+            <Typography component="span" variant="caption" sx={{ ml: 1.5, color: 'text.secondary' }}>
+              每 5 秒自动刷新 · 上次更新 {formatTime(lastUpdated)}
+            </Typography>
+          )}
         </Typography>
       </Grid>
 
