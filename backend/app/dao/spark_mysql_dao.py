@@ -6,6 +6,7 @@ import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 import pymysql
 from dbutils.pooled_db import PooledDB
@@ -150,12 +151,17 @@ def get_point_history(
         limit_clause = f"LIMIT {limit}"
 
     # 时间范围过滤
+    # 前端传的是 UTC 时间（带 Z），数据库存的是服务器本地时间（CST UTC+8）
+    # 需要把 UTC 时间转换为 Asia/Shanghai 时区，否则查询范围会偏移 8 小时
+    tz_sh = ZoneInfo("Asia/Shanghai")
     if start:
         sql += " AND created_at >= %s"
-        params.append(start.strftime("%Y-%m-%d %H:%M:%S"))
+        start_local = start.astimezone(tz_sh) if start.tzinfo else start
+        params.append(start_local.strftime("%Y-%m-%d %H:%M:%S"))
     if end:
         sql += " AND created_at <= %s"
-        params.append(end.strftime("%Y-%m-%d %H:%M:%S"))
+        end_local = end.astimezone(tz_sh) if end.tzinfo else end
+        params.append(end_local.strftime("%Y-%m-%d %H:%M:%S"))
 
     if group_clause:
         sql += " " + group_clause
