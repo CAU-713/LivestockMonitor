@@ -130,7 +130,8 @@ const HistoricalEnvironmentalDataPage = () => {
       start,
       end,
       granularity: backendG,
-      limit: 10000,
+      // raw(时刻)模式数据量大，用上限值防止多测点被截断
+      limit: backendG === 'raw' ? 50000 : 10000,
     });
   }, [granularity]);
 

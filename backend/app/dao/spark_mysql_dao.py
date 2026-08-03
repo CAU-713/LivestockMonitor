@@ -140,6 +140,7 @@ def get_point_history(
         limit_clause = f"LIMIT {limit}"
 
     else:  # raw
+        # 注意：降序取数 + LIMIT 保证截断时保留最新数据，返回前在 _execute_query 后反转
         sql = f"""
             SELECT id, created_at, gatewayMac, deviceId,
                    pointId, pointName, value
@@ -147,7 +148,7 @@ def get_point_history(
             WHERE pointId IN ({placeholders})
         """
         group_clause = ""
-        order_clause = "ORDER BY created_at ASC, pointId ASC"
+        order_clause = "ORDER BY created_at DESC, pointId ASC"
         limit_clause = f"LIMIT {limit}"
 
     # 时间范围过滤
@@ -168,7 +169,13 @@ def get_point_history(
     sql += " " + order_clause
     sql += " " + limit_clause
 
-    return _execute_query(sql, tuple(params))
+    rows = _execute_query(sql, tuple(params))
+
+    # raw 模式：SQL 是降序取数（保证 LIMIT 截断保留最新），这里反转回时间正序
+    if granularity == "raw":
+        rows.reverse()
+
+    return rows
 
 
 def get_point_types() -> List[str]:
