@@ -343,3 +343,73 @@ def get_data_save_count(
 
     row = _execute_one(sql, tuple(params))
     return row["cnt"] if row else 0
+
+
+# ==================== 预测结果相关 ====================
+
+# 27 个环境传感器 pointId（与预测模型 feature_cols.json 一致）
+_FORECAST_POINT_IDS = [
+    "BGT-N1", "BGT-N", "BGT-S",
+    "CO2-N1", "CO2-N", "CO2-S1", "CO2-S",
+    "HUM-N1", "HUM-N", "HUM-S1",
+    "LIG-N1", "LIG-N", "LIG-S1", "LIG-S",
+    "NH3-S",
+    "PM10-N", "PM10-S", "PM25-N",
+    "TEM-N1", "TEM-N", "TEM-S1",
+    "TSP-S1", "TSP-S",
+    "WIN-N1", "WIN-N", "WIN-S1", "WIN-S",
+]
+
+
+def get_forecast_latest_batch() -> Optional[Dict[str, Any]]:
+    """从 device_forecast_save 获取最新一批预测的元信息（单行）。"""
+    sql = """
+        SELECT batch_id, forecast_time, input_end_time,
+               model_name, model_version
+        FROM device_forecast_save
+        ORDER BY forecast_time DESC, id DESC
+        LIMIT 1
+    """
+    return _execute_one(sql)
+
+
+def get_forecast_batch_rows(batch_id: str) -> List[Dict[str, Any]]:
+    """获取指定批次的全部预测明细（长表，按目标时间与测点排序）。"""
+    sql = """
+        SELECT target_time, horizon_step, point_id, point_name, predicted_value
+        FROM device_forecast_save
+        WHERE batch_id = %s
+        ORDER BY target_time, point_id
+    """
+    return _execute_query(sql, (batch_id,))
+
+
+def get_forecast_batches(limit: int = 20) -> List[Dict[str, Any]]:
+    """获取最近预测批次列表（按批次聚合）。"""
+    sql = """
+        SELECT batch_id,
+               MAX(forecast_time)  AS forecast_time,
+               MAX(input_end_time) AS input_end_time,
+               MAX(model_name)     AS model_name,
+               MAX(model_version)  AS model_version,
+               COUNT(*)            AS `rows`,
+               MIN(target_time)    AS target_start,
+               MAX(target_time)    AS target_end
+        FROM device_forecast_save
+        GROUP BY batch_id
+        ORDER BY forecast_time DESC
+        LIMIT %s
+    """
+    return _execute_query(sql, (limit,))
+
+
+def get_env_sensor_last_nonzero() -> Optional[str]:
+    """获取 27 个环境测点最后一次非 0 值的时间（用于判断传感器是否全 0）。"""
+    placeholders = ",".join(["%s"] * len(_FORECAST_POINT_IDS))
+    sql = (
+        "SELECT MAX(created_at) AS last_nonzero FROM device_data_save "
+        f"WHERE pointId IN ({placeholders}) "
+        r"AND value NOT REGEXP '^0(\.0*)?$'"
+    )
+    row = _execute_one(sql, tuple(_FORECAST_POINT_IDS))
+    return str(row["last_nonzero"]) if row and row.get("last_nonzero") else None

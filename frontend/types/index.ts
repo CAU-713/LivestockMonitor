@@ -1,5 +1,6 @@
 // TypeScript types and interfaces go here
 export * from './ragflow';
+export * from './forecast';
 
 /**
  * @description Represents a single livestock shed

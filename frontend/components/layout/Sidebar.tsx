@@ -169,6 +169,14 @@ const Sidebar = () => {
           <ListItemText primary="系统总览" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/dashboard') ? 600 : 400 }} />
         </ListItemButton>
 
+        {/* 环境预测 */}
+        <ListItemButton component={Link} href="/forecast" sx={menuItemSx('/forecast')}>
+          <ListItemIcon sx={iconSx('/forecast')}>
+            <TrendingUpIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="环境预测" primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: isActive('/forecast') ? 600 : 400 }} />
+        </ListItemButton>
+
         {/* 实时数据 */}
         <ListItemButton onClick={() => setRealtimeOpen(!realtimeOpen)} sx={parentMenuSx(realtimeOpen)}>
           <ListItemIcon sx={parentIconSx(realtimeOpen)}>
