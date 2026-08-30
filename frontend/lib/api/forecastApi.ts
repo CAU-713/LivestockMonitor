@@ -28,8 +28,11 @@ const BASE = '/api/forecast';
 /**
  * 获取环境预测展示数据（最新批次 + 未来6小时预测明细 + 设备/数据状态）
  */
-export async function getForecastOverview(): Promise<ForecastOverview> {
-  const res = await apiFetch<ResponseDTO<ForecastOverview>>(`${BASE}/overview`);
+export async function getForecastOverview(
+  model?: string
+): Promise<ForecastOverview> {
+  const q = model ? `?model=${encodeURIComponent(model)}` : '';
+  const res = await apiFetch<ResponseDTO<ForecastOverview>>(`${BASE}/overview${q}`);
   return res.data;
 }
 
@@ -37,10 +40,13 @@ export async function getForecastOverview(): Promise<ForecastOverview> {
  * 获取最近预测批次列表
  */
 export async function getForecastBatches(
-  limit = 20
+  limit = 20,
+  model?: string
 ): Promise<ForecastBatchSummary[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (model) params.set('model', model);
   const res = await apiFetch<ResponseDTO<ForecastBatchSummary[]>>(
-    `${BASE}/batches?limit=${limit}`
+    `${BASE}/batches?${params.toString()}`
   );
   return res.data;
 }

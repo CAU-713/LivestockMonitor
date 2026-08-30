@@ -144,6 +144,7 @@ export interface MergedChartData {
   yAxes?: YAxisConfig[];
   lines: ChartLine[]; // An array of lines to draw
   data: ChartDataPoint[]; // The actual data points for the chart
+  referenceX?: string; // 可选：x 轴参考线位置（如预测起始时刻，标记真实/预测分界）
 }
 
 /**

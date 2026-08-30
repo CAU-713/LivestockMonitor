@@ -29,6 +29,15 @@ class ForecastPointDTO(BaseModel):
     predicted_value: float = Field(0, description="预测值")
 
 
+class ForecastHistoryPointDTO(BaseModel):
+    """环境测点历史真实值（5分钟聚合）"""
+
+    time: Optional[str] = Field(None, description="5分钟聚合时间")
+    point_id: str = Field("", description="传感器编码")
+    point_name: str = Field("", description="传感器中文名")
+    value: float = Field(0, description="真实值(5分钟均值)")
+
+
 class DeviceStatusDTO(BaseModel):
     """设备/数据状态"""
 
@@ -43,6 +52,9 @@ class ForecastOverviewDTO(BaseModel):
     """预测展示页一次性数据"""
 
     batch: Optional[ForecastBatchDTO] = Field(None, description="最新预测批次")
+    history: List[ForecastHistoryPointDTO] = Field(
+        default_factory=list, description="过去24小时真实值(5分钟聚合)"
+    )
     forecast: List[ForecastPointDTO] = Field(
         default_factory=list, description="预测明细"
     )

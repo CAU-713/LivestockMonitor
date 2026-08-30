@@ -10,6 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
   Area,
+  ReferenceLine,
 } from 'recharts';
 import { MergedChartData } from '@/types';
 import { Box } from '@mui/material';
@@ -19,7 +20,7 @@ interface LineChartProps {
 }
 
 const LineChart: React.FC<LineChartProps> = ({ chartData }) => {
-  const { unit, lines, data, yAxes } = chartData;
+  const { unit, lines, data, yAxes, referenceX } = chartData;
 
   // 每条线的可见性状态
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
@@ -93,6 +94,14 @@ const LineChart: React.FC<LineChartProps> = ({ chartData }) => {
         >
           <CartesianGrid strokeDasharray='3 3' />
           <XAxis dataKey='time' />
+          {referenceX && (
+            <ReferenceLine
+              x={referenceX}
+              stroke='#999'
+              strokeDasharray='3 3'
+              label={{ value: '预测开始', position: 'insideTopRight', fontSize: 12, fill: '#666' }}
+            />
+          )}
 
           {yAxes && yAxes.length > 0 ? (
             yAxes.map((axis) => (

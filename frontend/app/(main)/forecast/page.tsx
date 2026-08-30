@@ -7,13 +7,16 @@ import {
   CircularProgress,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from '@mui/material';
 import dayjs from 'dayjs';
 
 import LineChart from '@/components/charts/LineChart';
 import { getForecastOverview } from '@/lib/api/forecastApi';
-import type { ForecastOverview, ForecastPoint } from '@/types/forecast';
+import { FORECAST_MODELS } from '@/types/forecast';
+import type { ForecastOverview, ForecastPoint, ForecastHistoryPoint } from '@/types/forecast';
 import type { ChartDataPoint, ChartLine, MergedChartData } from '@/types';
 
 // 分组定义：传感器前缀 -> 展示名称与单位
@@ -46,36 +49,58 @@ function matchesCategory(pointId: string, prefixes: string[]) {
   return prefixes.some((p) => pointId.startsWith(p));
 }
 
-// 长表预测明细 → 单张分组图（该分组下每个 point 一条线）
+// 历史真实值 + 未来预测值 → 单张分组图（该分组下每个 point 一条连续线）
 function buildChart(
   category: { label: string; unit: string; prefixes: string[] },
-  rows: ForecastPoint[],
+  history: ForecastHistoryPoint[],
+  forecast: ForecastPoint[],
+  boundaryTime: string | null,
 ): MergedChartData | null {
+  const historyInCat = history.filter((h) =>
+    matchesCategory(h.point_id, category.prefixes),
+  );
+  const forecastInCat = forecast.filter((f) =>
+    matchesCategory(f.point_id, category.prefixes),
+  );
+
   const pointIds = Array.from(
-    new Set(
-      rows
-        .filter((r) => matchesCategory(r.point_id, category.prefixes))
-        .map((r) => r.point_id),
-    ),
+    new Set([
+      ...historyInCat.map((h) => h.point_id),
+      ...forecastInCat.map((f) => f.point_id),
+    ]),
   ).sort();
 
   if (pointIds.length === 0) return null;
 
-  const times = Array.from(
-    new Set(rows.map((r) => r.target_time).filter((t): t is string => !!t)),
-  ).sort();
-  const data: ChartDataPoint[] = times.map((t) => {
-    const point: ChartDataPoint = { time: formatTime(t) };
-    pointIds.forEach((pid) => {
-      const hit = rows.find((r) => r.target_time === t && r.point_id === pid);
-      point[pid] = hit ? Number(hit.predicted_value.toFixed(2)) : null;
-    });
-    return point;
+  // point_id -> 中文名（预测优先，历史回落）
+  const nameMap = new Map<string, string>();
+  forecastInCat.forEach((f) => nameMap.set(f.point_id, f.point_name));
+  historyInCat.forEach((h) => {
+    if (!nameMap.has(h.point_id)) nameMap.set(h.point_id, h.point_name);
   });
+
+  // 合并：真实值（过去24h）在前，预测值（未来）在后，天然连续
+  const dataMap = new Map<string, ChartDataPoint>();
+  const put = (t: string | null, pid: string, val: number) => {
+    if (!t) return;
+    const key = formatTime(t);
+    let row = dataMap.get(key);
+    if (!row) {
+      row = { time: key };
+      dataMap.set(key, row);
+    }
+    row[pid] = Number(Number(val).toFixed(2));
+  };
+  historyInCat.forEach((h) => put(h.time, h.point_id, h.value));
+  forecastInCat.forEach((f) => put(f.target_time, f.point_id, f.predicted_value));
+
+  const data = Array.from(dataMap.values()).sort((a, b) =>
+    String(a.time).localeCompare(String(b.time)),
+  );
 
   const lines: ChartLine[] = pointIds.map((pid, idx) => ({
     dataKey: pid,
-    name: rows.find((r) => r.point_id === pid)?.point_name || pid,
+    name: nameMap.get(pid) || pid,
     color: getColor(idx),
   }));
 
@@ -85,6 +110,7 @@ function buildChart(
     unit: category.unit,
     lines,
     data,
+    referenceX: boundaryTime ? formatTime(boundaryTime) : undefined,
   };
 }
 
@@ -92,10 +118,13 @@ export default function ForecastPage() {
   const [overview, setOverview] = useState<ForecastOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [model, setModel] = useState<string>(FORECAST_MODELS[0].value);
 
   useEffect(() => {
     let alive = true;
-    getForecastOverview()
+    setLoading(true);
+    setError(null);
+    getForecastOverview(model)
       .then((data) => {
         if (alive) setOverview(data);
       })
@@ -108,13 +137,14 @@ export default function ForecastPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [model]);
 
   const charts = useMemo(() => {
     if (!overview) return [];
-    return CATEGORIES.map((c) => buildChart(c, overview.forecast)).filter(
-      (c): c is MergedChartData => c !== null,
-    );
+    const boundary = overview.batch?.input_end_time ?? null;
+    return CATEGORIES.map((c) =>
+      buildChart(c, overview.history, overview.forecast, boundary),
+    ).filter((c): c is MergedChartData => c !== null);
   }, [overview]);
 
   const kpis = useMemo(() => {
@@ -157,6 +187,18 @@ export default function ForecastPage() {
       <Typography variant="h5" sx={{ fontWeight: 700 }}>
         环境预测
       </Typography>
+
+      {/* 模型选择 */}
+      <Tabs
+        value={model}
+        onChange={(_, v: string) => setModel(v)}
+        aria-label="预测模型选择"
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        {FORECAST_MODELS.map((m) => (
+          <Tab key={m.value} label={m.label} value={m.value} />
+        ))}
+      </Tabs>
 
       {/* 设备/数据状态 */}
       {!online && (
@@ -240,7 +282,7 @@ export default function ForecastPage() {
           {charts.map((chart) => (
             <Paper key={chart.title} sx={{ p: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                {chart.title}（未来 6 小时预测）
+                {chart.title}（过去 24 小时真实值 + 未来 6 小时预测）
               </Typography>
               <LineChart chartData={chart} />
             </Paper>

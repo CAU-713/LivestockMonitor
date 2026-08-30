@@ -3,7 +3,7 @@
 提供预测结果展示相关 API
 """
 import logging
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Query
 
@@ -13,11 +13,14 @@ from app.dao.spark_mysql_dao import (
     get_forecast_batches,
     get_env_sensor_last_nonzero,
     get_device_attributes_latest,
+    get_forecast_point_ids,
+    get_env_history_5min,
 )
 from app.schemas.responseDTO import ResponseDTO
 from app.schemas.forecastDTO import (
     ForecastBatchDTO,
     ForecastPointDTO,
+    ForecastHistoryPointDTO,
     ForecastOverviewDTO,
     ForecastBatchSummaryDTO,
     DeviceStatusDTO,
@@ -39,13 +42,15 @@ def _ts(value) -> str:
     summary="获取环境预测展示数据",
     description="返回最新预测批次、未来6小时预测明细以及设备/数据状态",
 )
-def get_forecast_overview() -> ResponseDTO[ForecastOverviewDTO]:
+def get_forecast_overview(
+    model: Annotated[Optional[str], Query(description="模型版本过滤，如 xlinear_nh3_26to27_v1")] = None,
+) -> ResponseDTO[ForecastOverviewDTO]:
     """获取预测展示页一次性数据。"""
     try:
         batch = None
         forecast: List[ForecastPointDTO] = []
 
-        latest = get_forecast_latest_batch()
+        latest = get_forecast_latest_batch(model)
         if latest:
             batch_id = latest["batch_id"]
             rows = get_forecast_batch_rows(batch_id)
@@ -71,6 +76,17 @@ def get_forecast_overview() -> ResponseDTO[ForecastOverviewDTO]:
                 target_end=_ts(targets[-1]) if targets else None,
             )
 
+        # 过去24小时真实值（5分钟聚合，与预测同分辨率对齐）
+        history = [
+            ForecastHistoryPointDTO(
+                time=_ts(r.get("record_time")),
+                point_id=r.get("pointId", ""),
+                point_name=r.get("pointName", ""),
+                value=float(r.get("value") or 0),
+            )
+            for r in get_env_history_5min(get_forecast_point_ids(), 24)
+        ]
+
         # 设备/数据状态（在线状态 + 传感器是否全 0）
         attr = get_device_attributes_latest()
         device = DeviceStatusDTO(
@@ -79,7 +95,7 @@ def get_forecast_overview() -> ResponseDTO[ForecastOverviewDTO]:
             last_nonzero_at=get_env_sensor_last_nonzero(),
         )
 
-        data = ForecastOverviewDTO(batch=batch, forecast=forecast, device=device)
+        data = ForecastOverviewDTO(batch=batch, history=history, forecast=forecast, device=device)
         return ResponseDTO(code=200, success=True, message="查询成功", data=data)
     except Exception as e:
         logger.error("Failed to get forecast overview: %s", e)
@@ -94,10 +110,11 @@ def get_forecast_overview() -> ResponseDTO[ForecastOverviewDTO]:
 )
 def get_forecast_batch_list(
     limit: Annotated[int, Query(description="返回批次数量", ge=1, le=100)] = 20,
+    model: Annotated[Optional[str], Query(description="模型版本过滤")] = None,
 ) -> ResponseDTO[List[ForecastBatchSummaryDTO]]:
     """获取最近预测批次列表。"""
     try:
-        rows = get_forecast_batches(limit)
+        rows = get_forecast_batches(limit, model)
         items = [
             ForecastBatchSummaryDTO(
                 batch_id=r.get("batch_id", ""),

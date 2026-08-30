@@ -22,6 +22,13 @@ export interface ForecastPoint {
   predicted_value: number;
 }
 
+export interface ForecastHistoryPoint {
+  time: string | null;
+  point_id: string;
+  point_name: string;
+  value: number;
+}
+
 export interface DeviceStatus {
   is_online: boolean;
   last_comm_time: string | null;
@@ -31,6 +38,7 @@ export interface DeviceStatus {
 
 export interface ForecastOverview {
   batch: ForecastBatch | null;
+  history: ForecastHistoryPoint[];
   forecast: ForecastPoint[];
   device: DeviceStatus;
 }
@@ -45,3 +53,9 @@ export interface ForecastBatchSummary {
   target_start: string | null;
   target_end: string | null;
 }
+
+/** 可选预测模型列表（value 对应 device_forecast_save.model_version） */
+export const FORECAST_MODELS = [
+  { value: 'xlinear_s0_final_v1', label: '环境全变量预测' },
+  { value: 'xlinear_nh3_26to27_v1', label: '氨气预测' },
+] as const;

@@ -361,16 +361,21 @@ _FORECAST_POINT_IDS = [
 ]
 
 
-def get_forecast_latest_batch() -> Optional[Dict[str, Any]]:
-    """从 device_forecast_save 获取最新一批预测的元信息（单行）。"""
+def get_forecast_latest_batch(
+    model_version: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """从 device_forecast_save 获取最新一批预测的元信息（单行，可按模型版本过滤）。"""
     sql = """
         SELECT batch_id, forecast_time, input_end_time,
                model_name, model_version
         FROM device_forecast_save
-        ORDER BY forecast_time DESC, id DESC
-        LIMIT 1
     """
-    return _execute_one(sql)
+    params: tuple = ()
+    if model_version:
+        sql += " WHERE model_version = %s"
+        params = (model_version,)
+    sql += " ORDER BY forecast_time DESC, id DESC LIMIT 1"
+    return _execute_one(sql, params)
 
 
 def get_forecast_batch_rows(batch_id: str) -> List[Dict[str, Any]]:
@@ -384,8 +389,10 @@ def get_forecast_batch_rows(batch_id: str) -> List[Dict[str, Any]]:
     return _execute_query(sql, (batch_id,))
 
 
-def get_forecast_batches(limit: int = 20) -> List[Dict[str, Any]]:
-    """获取最近预测批次列表（按批次聚合）。"""
+def get_forecast_batches(
+    limit: int = 20, model_version: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """获取最近预测批次列表（按批次聚合，可按模型版本过滤）。"""
     sql = """
         SELECT batch_id,
                MAX(forecast_time)  AS forecast_time,
@@ -396,11 +403,18 @@ def get_forecast_batches(limit: int = 20) -> List[Dict[str, Any]]:
                MIN(target_time)    AS target_start,
                MAX(target_time)    AS target_end
         FROM device_forecast_save
+    """
+    params: list = []
+    if model_version:
+        sql += " WHERE model_version = %s"
+        params.append(model_version)
+    sql += """
         GROUP BY batch_id
         ORDER BY forecast_time DESC
         LIMIT %s
     """
-    return _execute_query(sql, (limit,))
+    params.append(limit)
+    return _execute_query(sql, tuple(params))
 
 
 def get_env_sensor_last_nonzero() -> Optional[str]:
@@ -413,3 +427,28 @@ def get_env_sensor_last_nonzero() -> Optional[str]:
     )
     row = _execute_one(sql, tuple(_FORECAST_POINT_IDS))
     return str(row["last_nonzero"]) if row and row.get("last_nonzero") else None
+
+
+def get_forecast_point_ids() -> List[str]:
+    """返回预测覆盖的 27 个环境测点 pointId（用于历史真实值查询）。"""
+    return list(_FORECAST_POINT_IDS)
+
+
+def get_env_history_5min(
+    point_ids: List[str], hours: int = 24
+) -> List[Dict[str, Any]]:
+    """获取环境测点过去 N 小时的真实值（5 分钟聚合均值），用于预测页历史+预测接续展示。"""
+    if not point_ids:
+        return []
+    placeholders = ",".join(["%s"] * len(point_ids))
+    sql = f"""
+        SELECT pointId, pointName,
+               FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(created_at)/300)*300) AS record_time,
+               ROUND(AVG(CAST(value AS DECIMAL(12,4))), 2) AS value
+        FROM device_data_save
+        WHERE pointId IN ({placeholders})
+          AND created_at >= NOW() - INTERVAL %s HOUR
+        GROUP BY pointId, pointName, record_time
+        ORDER BY record_time ASC, pointId ASC
+    """
+    return _execute_query(sql, tuple(list(point_ids) + [hours]))
